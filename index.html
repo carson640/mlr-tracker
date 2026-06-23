@@ -1492,7 +1492,7 @@ input.picker-search{ padding-left:42px; font-size:16px; }
       <button class="nav" data-tab="inventory">Inventory</button>
       <button class="nav" data-tab="returning">Return equipment</button>
       <button class="nav" data-tab="cleaning">Clean &amp; sign off</button>
-      <a class="nav" href="https://carson640.github.io/mlr-tracker/check.html" target="_blank" rel="noopener" style="text-decoration:none;display:block;">Spot check</a>
+      <a class="nav" href="https://carson640.github.io/mlr-tracker/check.html" target="_blank" rel="noopener" style="text-decoration:none;display:block;text-align:center;">Spot check</a>
       <div class="nav-section">Look up</div>
       <button class="nav" data-tab="signoffs">Cleaning history</button>
       <button class="nav" data-tab="specs">Specs &amp; manuals</button>
@@ -1981,6 +1981,7 @@ function capacityOf(a){
   if(c && !isMoneyish(c) && !isRfid(c) && !/^\d{4,}$/.test(c)) return c;            // other descriptive capacity (not a bare serial/asset/money)
   return '';
 }
+function costOf(a){ var c=String((a&&a.rentalCost)||'').trim(); return /\d/.test(c)?c:''; }   // show a rate only if it has an actual amount (hide a bare "$")
 function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function classOf(a){ return String((a&&a.type)||'').trim() || String((a&&a.category)||'').trim() || 'Equipment'; }
 function makeModel(a){
@@ -2418,7 +2419,7 @@ window.openAssetDetail=function(id){
     ${row('Serial #', serialOf(a)||'Not recorded')}
     ${row('RFID tag', rfidOf(a))}
     ${row('Capacity / specs', capacityOf(a))}
-    ${row('Rate', a.rentalCost)}
+    ${row('Rate', costOf(a))}
     ${row('Last cleaned', a.lastCleanedAt)}
     ${row('Cleaned by', a.cleanedBy)}
     ${row('QC by', a.qcBy)}
@@ -2677,7 +2678,7 @@ function renderCards(){
       </div>
       ${od?`<div class="overdue-banner">⚠ Return overdue since ${a.expectedReturn}</div>`:''}
       <div class="meta"><b>Serial #</b> ${serialOf(a)||'<span style="color:var(--muted2);">Not recorded</span>'}${rfidOf(a)?`<br><b>RFID tag</b> ${rfidOf(a)}`:''}</div>
-      <div class="meta">Capacity: ${capacityOf(a)||'—'} · Rate: ${a.rentalCost||'—'}</div>
+      <div class="meta">Capacity: ${capacityOf(a)||'—'}${costOf(a)?(' · Rate: '+costOf(a)):''}</div>
       <div class="meta"><b>Location</b><br><select class="card-loc-select" onclick="event.stopPropagation();" onchange="moveAssetTo('${a.id}',this.value)">${locOptions(a.location||'')}</select></div>
       ${floorRoomStr(a)?`<div class="meta"><b>On site</b><br>${escapeHtml(floorRoomStr(a))}</div>`:''}
       <div class="meta"><b>Assigned to</b><br>${a.custodian&&a.custodian!=='Inventory'?`<span class="assigned-link" data-assigned="${escapeHtml(a.custodian)}" onclick="event.stopPropagation();filterByAssigned(this.dataset.assigned)">${escapeHtml(a.custodian)}</span>`:'Inventory'}${a.cleanedBy?`<br>Cleaned by ${escapeHtml(a.cleanedBy)} · QC ${escapeHtml(a.qcBy)||'—'}`:''}</div>
