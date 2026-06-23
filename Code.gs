@@ -23,6 +23,7 @@ function doGet(e) {
   // API mode for the standalone live-camera scanner page: ?api=state returns JSON. Does not affect the normal app load.
   var __p = (e && e.parameter) || {};
   if (__p.api === 'tidy' && __p.key === 'mlrtidy0623') { return ContentService.createTextOutput(normalizeAssets()).setMimeType(ContentService.MimeType.TEXT); }
+  if (__p.api === 'restore' && __p.key === 'mlrtidy0623' && __p.tab) { return ContentService.createTextOutput(restoreAssets(__p.tab)).setMimeType(ContentService.MimeType.TEXT); }
   if (__p.api) { return apiResponse_(__p); }
   // Phone-camera deep link: ?scan=NUMBER (or ?find=NUMBER) from a QR label opens that piece.
   var scan = (e && e.parameter && (e.parameter.scan || e.parameter.find)) || '';
@@ -379,7 +380,7 @@ function normalizeAssets() {
       if (cap && !isSpec(cap)) { if (isMoney(cap)) cap = ''; else if (/^\d{5,}$/.test(cap)) { if (!serial) serial = cap; cap = ''; } }
 
       // a compound code mistakenly in capacity (e.g. "CF-01T-...CFM") is not a real spec → clear it
-      if (cap && /[-_]/.test(cap)) cap = '';
+      if (cap && cap === S(r[col.assetNumber])) cap = '';
       // rename the two box trucks wherever they appear (location / vehicle / destination)
       var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck' };
       if (REN[loc.toLowerCase()]) loc = REN[loc.toLowerCase()];
@@ -410,4 +411,17 @@ function normalizeAssets() {
   } finally {
     lock.releaseLock();
   }
+}
+
+function restoreAssets(tabName){
+  var lock=LockService.getScriptLock(); lock.waitLock(120000);
+  try{
+    var ss=ss_(); var src=ss.getSheetByName(tabName); if(!src) return 'Backup not found: '+tabName;
+    var dst=sheet_('Assets', ASSET_COLS);
+    var sd=src.getDataRange().getValues();
+    var dlast=dst.getLastRow(); if(dlast>1) dst.getRange(2,1,dlast-1,dst.getLastColumn()).clearContent();
+    if(sd.length>1){ dst.getRange(2,1,sd.length-1,sd[0].length).setValues(sd.slice(1)); }
+    bumpVersion_();
+    return 'Restored '+(sd.length-1)+' rows from '+tabName;
+  } finally { lock.releaseLock(); }
 }

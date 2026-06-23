@@ -1940,7 +1940,7 @@ function serialOf(a){
   var an=String((a&&a.assetNumber)||'').trim(); if(an && !isRfid(an) && isSerialLike(an)) return an;  // fall back to asset # only if it looks like a real serial (not a spec/code/word)
   return '';
 }
-function isCleanSpec(v){ v=String(v==null?'':v).trim(); return !!v && !/[-_]/.test(v) && v.length<=18 && isSpecVal(v); }  // a tidy spec like "200 CFM" / "8 Gallon" — not a long code with dashes
+function isCleanSpec(v){ v=String(v==null?'':v).trim(); if(!v||v.length>24||!isSpecVal(v)) return false; var core=v.replace(/\b(cfm|gallons?|gal|pints?|ppd|amps?|volts?|watts?|hp|btu|psi|gpm|inch(?:es)?|liters?|litres?|microns?|µm|sq\.?\s?ft|cu\.?\s?ft)\b/ig,''); if(/[A-Za-z]\d|\d[A-Za-z]/.test(core)) return false; return true; }  // a tidy spec like "200 CFM" / "275-700 CFM" / "8 Gallon" — but NOT a long alnum code like "CF-01T-A1A20285-...CFM"
 function capacityOf(a){
   if(isCleanSpec(a&&a.capacity)) return String(a.capacity).trim();                  // real spec in the capacity field
   if(isCleanSpec(a&&a.serialNumber)) return String(a.serialNumber).trim();          // a spec ("500 CFM") got typed into the serial field
