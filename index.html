@@ -1965,9 +1965,10 @@ function isRfid(v){ return /^(2415|2145)\d{2,}$/.test(String(v||'').trim()); }
 function rfidOf(a){ if(isRfid(a&&a.assetNumber)) return String(a.assetNumber).trim(); if(isRfid(a&&a.barcode)) return String(a.barcode).trim(); return ''; }
 function isSpecVal(v){ v=String(v==null?'':v); return /\d/.test(v) && /(cfm|gallons?|gal\b|pints?|ppd|amps?|volts?|watts?|hp\b|btu|psi|gpm|inch(?:es)?|"|liters?|litres?|micron|µm|sq\.?\s?ft|cu\.?\s?ft)\b/i.test(v); }
 function isMoneyish(v){ v=String(v==null?'':v).trim(); return v==='$' || /^\$/.test(v) || /^\$?\d[\d,]*\.\d{2}$/.test(v); }
+function isSerialLike(v){ v=String(v==null?'':v).trim(); if(!v||v==='—'||v==='-') return false; if(isMoneyish(v)||isSpecVal(v)) return false; if(!/\d/.test(v)) return false; if(/^(trailer|storage|warehouse|repair|unassigned|shop|office|yard|van|truck|inventory|roy|returned|dirty|available|n\/a|none|tbd)\b/i.test(v)) return false; return true; }
 function serialOf(a){
   var s=String((a&&a.serialNumber)||'').trim();
-  if(s && s!=='—' && s!=='-' && !isMoneyish(s) && !isSpecVal(s)) return s;        // a real serial already on file
+  if(s && isSerialLike(s)) return s;        // a real serial already on file (has a number in it; not a location/crew/word)
   var combo=(String((a&&a.manufacturer)||'')+' '+String((a&&a.model)||'')).trim(); // serial often typed onto the end of the name
   var last=combo.split(/\s+/).pop()||'';
   if(/\d{5,}/.test(last) && !isSpecVal(last)){ var tok=last.replace(/[^A-Za-z0-9-]/g,''); if(tok) return tok; }

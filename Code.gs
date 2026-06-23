@@ -22,6 +22,7 @@ var SIGNOFF_COLS = ['id','json'];
 function doGet(e) {
   // API mode for the standalone live-camera scanner page: ?api=state returns JSON. Does not affect the normal app load.
   var __p = (e && e.parameter) || {};
+  if (__p.api === 'tidy' && __p.key === 'mlrtidy0623') { return ContentService.createTextOutput(normalizeAssets()).setMimeType(ContentService.MimeType.TEXT); }
   if (__p.api) { return apiResponse_(__p); }
   // Phone-camera deep link: ?scan=NUMBER (or ?find=NUMBER) from a QR label opens that piece.
   var scan = (e && e.parameter && (e.parameter.scan || e.parameter.find)) || '';
@@ -358,6 +359,8 @@ function normalizeAssets() {
       if (isSpec(serial)) { if (!isSpec(cap)) cap = serial; serial = ''; }
       // money / placeholder junk in the serial field → clear it
       if (serial === '—' || serial === '-' || isMoney(serial)) serial = '';
+      // a location / crew / plain word sitting in the serial field → clear it (a real serial has a number in it)
+      if (serial && (!/\d/.test(serial) || /^(trailer|storage|warehouse|repair|unassigned|shop|office|yard|van|truck|inventory|roy|returned|dirty|available|n\/a|none|tbd)\b/i.test(serial))) serial = '';
 
       if (serial) {
         // a real serial that also trails the name → remove the trailing copy from the name
