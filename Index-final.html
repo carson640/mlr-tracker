@@ -1948,8 +1948,17 @@ function makeModel(a){
   // safety net: collapse a whole-string doubling like "Moab 85 Moab 85"
   var t=s.split(' ');
   if(t.length>=2 && t.length%2===0){ var h=t.length/2; if(t.slice(0,h).join(' ').toLowerCase()===t.slice(h).join(' ').toLowerCase()) s=t.slice(0,h).join(' '); }
-  // when the serial field is blank, a trailing 5+ digit number on the model is really the unit's serial (shown in the Serial column) — don't repeat it here
-  if(!String((a&&a.serialNumber)||'').trim()) s=(s.replace(/\s+\d{5,}\s*$/,'').trim()||s);
+  // the unit's serial often got typed onto the end of the model name — it shows in the Serial column, so strip it here so it isn't repeated
+  var sn=String(serialOf(a)||'').trim();
+  if(sn && sn.length>=4 && /\d/.test(sn)){
+    var reSn=new RegExp('[\\s#:_-]*'+sn.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$','i');
+    var stripped=s.replace(reSn,'').trim();
+    if(stripped) s=stripped;
+  }
+  // fallback: blank serial but a trailing 5+ digit number on the model is the unit's serial
+  else if(!String((a&&a.serialNumber)||'').trim()){
+    s=(s.replace(/[\s#:_-]*\d{5,}\s*$/,'').trim()||s);
+  }
   return s.trim();
 }
 function idShort(a){ const s=serialOf(a), r=rfidOf(a); const p=[]; if(s)p.push('S/N '+s); if(r)p.push('RFID '+r); return p.join(' · ')||'No ID tag'; }
