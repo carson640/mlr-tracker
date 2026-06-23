@@ -1928,10 +1928,30 @@ $('saveUserBtn').onclick=()=>{localStorage.setItem(USER_KEY,currentUser());addLo
 // and some are missing a serial number — so each is shown only when present.
 function isRfid(v){ return /^(2415|2145)\d{2,}$/.test(String(v||'').trim()); }
 function rfidOf(a){ if(isRfid(a&&a.assetNumber)) return String(a.assetNumber).trim(); if(isRfid(a&&a.barcode)) return String(a.barcode).trim(); return ''; }
-function serialOf(a){ const s=String((a&&a.serialNumber)||'').trim(); if(s) return s; const an=String((a&&a.assetNumber)||'').trim(); if(an && !isRfid(an)) return an; return ''; }
+function serialOf(a){ const s=String((a&&a.serialNumber)||'').trim(); if(s) return s; const combo=(String((a&&a.manufacturer)||'')+' '+String((a&&a.model)||'')).trim(); const m=combo.match(/(\d{5,})\s*$/); if(m) return m[1]; const an=String((a&&a.assetNumber)||'').trim(); if(an && !isRfid(an)) return an; return ''; }
 function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function classOf(a){ return String((a&&a.type)||'').trim() || String((a&&a.category)||'').trim() || 'Equipment'; }
-function makeModel(a){ return `${(a&&a.manufacturer)||''} ${(a&&a.model)||''}`.trim(); }
+function makeModel(a){
+  var mk=String((a&&a.manufacturer)||'').replace(/\s+/g,' ').trim();
+  var md=String((a&&a.model)||'').replace(/\s+/g,' ').trim();
+  var s;
+  if(!mk) s=md;
+  else if(!md) s=mk;
+  else{
+    var lmk=mk.toLowerCase(), lmd=md.toLowerCase();
+    if(lmk===lmd) s=md;                       // same value in both fields
+    else if(lmd.indexOf(lmk+' ')===0) s=md;   // model already begins with the make
+    else if(lmk.indexOf(lmd+' ')===0) s=mk;   // make already begins with the model
+    else s=mk+' '+md;
+  }
+  s=String(s||'').trim();
+  // safety net: collapse a whole-string doubling like "Moab 85 Moab 85"
+  var t=s.split(' ');
+  if(t.length>=2 && t.length%2===0){ var h=t.length/2; if(t.slice(0,h).join(' ').toLowerCase()===t.slice(h).join(' ').toLowerCase()) s=t.slice(0,h).join(' '); }
+  // when the serial field is blank, a trailing 5+ digit number on the model is really the unit's serial (shown in the Serial column) — don't repeat it here
+  if(!String((a&&a.serialNumber)||'').trim()) s=(s.replace(/\s+\d{5,}\s*$/,'').trim()||s);
+  return s.trim();
+}
 function idShort(a){ const s=serialOf(a), r=rfidOf(a); const p=[]; if(s)p.push('S/N '+s); if(r)p.push('RFID '+r); return p.join(' · ')||'No ID tag'; }
 function assetLabel(a){return `${classOf(a)} — ${makeModel(a)||'—'}${serialOf(a)?' (S/N '+serialOf(a)+')':''}`}
 
