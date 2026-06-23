@@ -1507,17 +1507,13 @@ input.picker-search{ padding-left:42px; font-size:16px; }
         <div>
           <p class="eyebrow">Live inventory</p>
           <h1>Know where every piece is.</h1>
-          <p class="sub">Checked out → returned dirty → cleaned → QC → available.</p>
+          <p class="sub">Find any piece, send it to a job, bring it back, and clean it — all from your phone.</p>
         </div>
         <div class="operator-card">
           <label>Using tracker as<input id="currentUser" placeholder="Type your name" /></label>
           <button id="saveUserBtn">Save user</button>
         </div>
       </header>
-
-      <section class="flow">
-        <span>Checked out</span><b>→</b><span class="warn">Returned / dirty</span><b>→</b><span class="clean">Cleaned + QC</span><b>→</b><span class="ok">Available</span>
-      </section>
 
       <section id="dashboard" class="view active-view">
         <style>
@@ -1529,12 +1525,17 @@ input.picker-search{ padding-left:42px; font-size:16px; }
         .load-hero-btn .lhb-tx b{font-family:'DM Sans',sans-serif;font-weight:800;font-size:20px;line-height:1.1;letter-spacing:-.01em;}
         .load-hero-btn .lhb-tx small{font-size:13px;opacity:.92;font-weight:600;}
         .load-hero-btn .lhb-ar{flex:0 0 auto;font-size:26px;font-weight:700;opacity:.9;}
+        /* friendlier: bigger, clearer tap targets */
+        .action-tile .ti-title{font-size:18px;}
+        .action-tile .ti-sub{font-size:13.5px;}
+        .big-search{font-size:17px;}
+        aside .nav{font-size:15px;}
         </style>
-        <button type="button" class="load-hero-btn" onclick="setTab('load')">
+        <a class="load-hero-btn" href="https://carson640.github.io/mlr-tracker/scan.html" target="_blank" rel="noopener" style="text-decoration:none;">
           <span class="lhb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="13" height="11" rx="1.5"/><path d="M14 9h4l3 3v5h-7z"/><circle cx="6" cy="18.5" r="1.7"/><circle cx="18" cy="18.5" r="1.7"/></svg></span>
-          <span class="lhb-tx"><b>Load &amp; deliver</b><small>Scan equipment out to a job — tap to start</small></span>
+          <span class="lhb-tx"><b>Load &amp; deliver</b><small>Live camera scan — counts up as you scan</small></span>
           <span class="lhb-ar">→</span>
-        </button>
+        </a>
         <div class="big-search-wrap">
           <span class="big-search-icon">⌕</span>
           <input id="dashSearch" class="big-search" autocomplete="off" placeholder="Scan a barcode or type an asset #, model, or location…" />
@@ -2590,9 +2591,12 @@ window.clearPick=function(prefix){
 function renderCards(){
   const rows=filteredAssets();
   const query=($('search')?.value||'').trim();
+  const _hasFilter=query||locationFilter||assignedFilter;
+  const _countTxt=query?`${rows.length} result${rows.length===1?'':'s'} for "${escapeHtml(query)}"`:(_hasFilter?`${rows.length} result${rows.length===1?'':'s'}`:`${rows.length} piece${rows.length===1?'':'s'} total`);
+  const countBanner=`<div class="result-count" style="font-weight:800;font-size:15px;color:#1769d6;padding:4px 2px 12px;">${_countTxt}</div>`;
   if((query||locationFilter||assignedFilter) && !selectMode){
     const banner=assignedFilter?`<div class="filter-banner">Showing equipment assigned to <b>${escapeHtml(assignedFilter)}</b><button class="type-clear-btn" onclick="clearAssignedFilter()">✕ Clear</button></div>`:'';
-    $('assetCards').innerHTML=banner+renderResultsPanel(rows);
+    $('assetCards').innerHTML=countBanner+banner+renderResultsPanel(rows);
     return;
   }
   // Default card grid
@@ -2624,7 +2628,7 @@ function renderCards(){
     </article>`;
   }).join('');
   const overflow=rows.length>300?`<div class="panel">Showing first 300 of ${rows.length}.</div>`:'';
-  $('assetCards').innerHTML=(cards||'<div class="panel">No equipment found.</div>')+overflow;
+  $('assetCards').innerHTML=countBanner+(cards||'<div class="panel">No equipment found.</div>')+overflow;
 }
 
 function renderLocationBtns(){
