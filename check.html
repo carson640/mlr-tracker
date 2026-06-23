@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>MLR Warehouse Spot-Check</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:#0b1220;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+  #start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;background:linear-gradient(150deg,#16294d,#1769d6);}
+  #start .badge{width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;}
+  #start h1{font-size:23px;margin:0;font-weight:800;letter-spacing:-.01em;}
+  #start p{font-size:14px;opacity:.92;margin:0;max-width:340px;line-height:1.5;}
+  #startBtn{background:#fff;color:#16294d;border:0;border-radius:13px;padding:17px 30px;font-weight:800;font-size:18px;margin-top:6px;}
+  #startStatus{font-size:12px;opacity:.8;min-height:16px;}
+  #cam{position:fixed;inset:0;background:#000;display:none;flex-direction:column;}
+  #cam .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));}
+  #count{font-weight:800;font-size:18px;}
+  #cam .bar .right{display:flex;gap:8px;align-items:center;}
+  #torch{display:none;background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:9px;padding:12px 16px;font-weight:800;font-size:15px;}
+  #done{background:#fff;color:#000;border:0;border-radius:9px;padding:12px 26px;font-weight:800;font-size:16px;}
+  #reader{flex:1;min-height:0;}
+  #manual{margin:8px 14px 0;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:11px;padding:13px;font-weight:800;font-size:15px;}
+  #msg{padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));min-height:64px;font-weight:600;font-size:14px;line-height:1.6;}
+  .ov{position:fixed;inset:0;background:#0f172a;display:none;overflow:auto;color:#fff;}
+  .wrap{max-width:620px;margin:0 auto;padding:18px;padding-top:max(18px,env(safe-area-inset-top));}
+  .ov h2{font-size:21px;margin:0;}
+  .row{display:flex;justify-content:space-between;align-items:center;}
+  .linkbtn{background:transparent;color:#94a3b8;border:0;font-weight:700;font-size:15px;}
+  .tallies{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;}
+  .tally{flex:1;min-width:130px;border-radius:12px;padding:12px 14px;background:#1e293b;}
+  .tally b{display:block;font-size:26px;line-height:1;margin-bottom:4px;}
+  .tally span{font-size:12px;color:#cbd5e1;}
+  .item{padding:11px 12px;border-radius:9px;margin-bottom:7px;background:#1e293b;border-left:4px solid #475569;}
+  .item .nm{font-weight:700;}
+  .item .dt{font-size:12.5px;color:#94a3b8;margin-top:2px;}
+  .item.in{border-left-color:#4ade80;}
+  .item.out{border-left-color:#fbbf24;}
+  .item.other{border-left-color:#60a5fa;}
+  .item.miss{border-left-color:#f87171;}
+  .more{flex:1;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:11px;padding:15px;font-weight:800;font-size:15px;}
+  .close{flex:1;background:#177245;color:#fff;border:0;border-radius:11px;padding:15px;font-weight:800;font-size:16px;}
+</style>
+</head>
+<body>
+  <div id="start">
+    <div class="badge">ET</div>
+    <h1>Warehouse spot-check</h1>
+    <p>Scan any pieces you see in the warehouse. Each one shows whether it's in the system and whether it's marked in stock or out on a job.</p>
+    <button id="startBtn">Start scanning</button>
+    <div id="startStatus">Loading inventory…</div>
+  </div>
+
+  <div id="cam">
+    <div class="bar">
+      <span id="count">0 scanned</span>
+      <span class="right">
+        <button id="torch">Light</button>
+        <button id="done">Done</button>
+      </span>
+    </div>
+    <div id="reader"></div>
+    <button id="manual">No barcode? Enter serial number</button>
+    <div id="msg"></div>
+  </div>
+
+  <div class="ov" id="summary">
+    <div class="wrap">
+      <div class="row"><h2 id="sumTitle">Spot-check results</h2><button class="linkbtn" id="sumClear">Clear</button></div>
+      <div class="tallies">
+        <div class="tally"><b id="tIn" style="color:#4ade80;">0</b><span>In stock (good)</span></div>
+        <div class="tally"><b id="tOut" style="color:#fbbf24;">0</b><span>Marked out on a job</span></div>
+        <div class="tally"><b id="tOther" style="color:#60a5fa;">0</b><span>Here, other status</span></div>
+        <div class="tally"><b id="tMiss" style="color:#f87171;">0</b><span>Not in the system</span></div>
+      </div>
+      <div id="sumList"></div>
+      <div style="display:flex;gap:10px;margin-top:8px;padding-bottom:24px;">
+        <button class="more" id="sumMore">Scan more</button>
+        <button class="close" id="sumClose">Done</button>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var API="https://script.google.com/macros/s/AKfycbzqWqQaBG37o8o-LMXAgVNTjuGFWcqTtENnjmFX-EcaZb2RW7Qt-Gp0oiula3OWc4g--Q/exec";
+  var assets=[], byCode={}, scanned=[], qr=null, cooldown={}, lines=[];
+  function $(id){return document.getElementById(id);}
+  function n(s){return String(s==null?"":s).trim().toLowerCase();}
+  function show(el,d){el.style.display=d||"block";}
+  function hide(el){el.style.display="none";}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function indexAssets(){ byCode={}; for(var i=0;i<assets.length;i++){ var a=assets[i]; [a.assetNumber,a.barcode,a.serialNumber].forEach(function(c){var k=n(c); if(k) byCode[k]=a;}); } }
+  function loadAssets(cb){
+    var name="__cb"+Math.random().toString(36).slice(2), done=false;
+    var s=document.createElement("script");
+    window[name]=function(d){ done=true; try{ assets=(d&&d.assets)||[]; indexAssets(); }catch(e){} cleanup(); cb&&cb(true); };
+    function cleanup(){ try{delete window[name];}catch(e){} if(s.parentNode)s.parentNode.removeChild(s); }
+    s.onerror=function(){ if(!done){ cleanup(); cb&&cb(false); } };
+    s.src=API+"?api=state&callback="+name+"&t="+Date.now();
+    document.body.appendChild(s);
+    setTimeout(function(){ if(!done){ cleanup(); cb&&cb(false); } },25000);
+  }
+  function lookup(code){ return byCode[n(code)]||null; }
+  function nameOf(a){ return (a&&(a.type||a.category))||"Equipment"; }
+  function numOf(a){ return (a&&(a.assetNumber||a.barcode||a.serialNumber))||""; }
+  function locOf(a){ return (a&&a.location)||""; }
+  function custOf(a){ return (a&&a.custodian)||""; }
+  function kindOf(a){ var s=n(a&&a.status); if(s.indexOf("available")>=0) return "in"; if(s.indexOf("checked out")>=0) return "out"; return "other"; }
+
+  function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="square"; o.frequency.value=900; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop(); if(c.close)c.close();},90);}catch(e){} }
+  function line(t,color){ lines.unshift({t:t,c:color}); if(lines.length>6)lines.pop(); var m=$("msg"); m.innerHTML=lines.map(function(l){return '<div style="color:'+l.c+';">'+l.t+'</div>';}).join(""); }
+  function setCount(){ $("count").textContent=scanned.length+" scanned"; }
+
+  function record(a, code){
+    var entry;
+    if(!a){ entry={ _id:"miss:"+n(code), kind:"miss", name:'"'+code+'"', num:"", loc:"", cust:"", status:"Not in the system" }; }
+    else { entry={ _id:(a.id||numOf(a)), kind:kindOf(a), name:nameOf(a), num:numOf(a), loc:locOf(a), cust:custOf(a), status:(a.status||"") }; }
+    if(scanned.some(function(x){return x._id===entry._id;})) { line("Already scanned: "+esc(entry.name),"#cbd5e1"); return; }
+    scanned.push(entry); setCount(); beep(); try{if(navigator.vibrate)navigator.vibrate(50);}catch(e){}
+    if(entry.kind==="in"){ line("✓ "+esc(entry.name)+" #"+esc(entry.num)+" — in stock","#4ade80"); }
+    else if(entry.kind==="out"){ line("⚠ "+esc(entry.name)+" #"+esc(entry.num)+" — system says OUT"+(entry.cust?(" ("+esc(entry.cust)+")"):""),"#fbbf24"); }
+    else if(entry.kind==="other"){ line("• "+esc(entry.name)+" #"+esc(entry.num)+" — "+esc(entry.status||"here"),"#60a5fa"); }
+    else { line("✕ "+esc(entry.name)+" — not in the system","#f87171"); }
+  }
+  function onCode(txt){ var code=String(txt||"").trim(); if(!code) return; var now=Date.now(); if(cooldown[code]&&now-cooldown[code]<1500) return; cooldown[code]=now; record(lookup(code), code); }
+
+  function boxFn(vw,vh){ var s=Math.round(Math.min(vw||300,vh||300)*0.8); return {width:s,height:s}; }
+  function setupTorch(){ try{ var v=document.querySelector("#reader video"); if(!v||!v.srcObject) return; var t=(v.srcObject.getVideoTracks()||[])[0]; if(!t||!t.getCapabilities) return; var caps=t.getCapabilities(); if(!caps||!caps.torch) return; var b=$("torch"); var on=false; b.style.display="inline-block"; b.onclick=function(){on=!on;try{t.applyConstraints({advanced:[{torch:on}]});}catch(e){} b.textContent=on?"Light on":"Light";}; }catch(e){} }
+  function makeQr(useDetector){ var cfg={verbose:false}; if(useDetector){ cfg.experimentalFeatures={useBarCodeDetectorIfSupported:true}; try{ if(typeof Html5QrcodeSupportedFormats!=="undefined") cfg.formatsToSupport=[Html5QrcodeSupportedFormats.QR_CODE]; }catch(e){} } return new Html5Qrcode("reader",cfg); }
+  function camError(e){ var m=(e&&e.message)||(""+e); if(/NotAllowed|Permission|denied/i.test(m)){ line("Camera is blocked — allow it for this page, then reopen. Or tap “No barcode”.","#fbbf24"); } else if(/NotFound|device not found/i.test(m)){ line("No camera found — tap “No barcode” to type the number.","#fbbf24"); } else if(/NotReadable|in use|Could not start video|TrackStart/i.test(m)){ line("Camera is busy in another app — close it and reopen.","#fbbf24"); } else { line("Camera couldn’t start ("+esc(m)+"). Tap “No barcode”, or reopen.","#fbbf24"); } }
+  function startAttempt(useDetector,isRetry){
+    try{ qr=makeQr(useDetector); } catch(e){ if(!isRetry){ startAttempt(false,true); return; } line("Scanner could not start — reopen the page.","#fbbf24"); return; }
+    qr.start({facingMode:"environment"},{fps:15,qrbox:boxFn},onCode,function(){})
+      .then(function(){ try{ var v=document.querySelector("#reader video"); if(v&&v.srcObject){ var t=(v.srcObject.getVideoTracks()||[])[0]; if(t&&t.applyConstraints){ t.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(function(){}); } } }catch(e){} try{ setupTorch(); }catch(e){} })
+      .catch(function(e){ if(!isRetry){ try{ if(qr&&qr.stop) qr.stop().catch(function(){}); }catch(_){} try{ if(qr&&qr.clear) qr.clear(); }catch(_){} qr=null; setTimeout(function(){ startAttempt(false,true); },400); return; } camError(e); });
+  }
+  function openCamera(){
+    hide($("start")); hide($("summary"));
+    var c=$("cam"); c.style.display="flex"; lines=[]; cooldown={}; setCount();
+    line("Point at each tag — it logs automatically.","#cbd5e1");
+    if(typeof Html5Qrcode==="undefined"){ line("Scanner library could not load — check your connection and reopen.","#fbbf24"); return; }
+    startAttempt(true,false);
+  }
+  function stopCamera(cb){ if(qr){ try{ qr.stop().then(function(){try{qr.clear();}catch(e){} qr=null; cb&&cb();}).catch(function(){ qr=null; cb&&cb(); }); return; }catch(e){ qr=null; } } cb&&cb(); }
+  function openManual(){ var v=prompt("Enter serial / asset number:"); if(v==null) return; v=String(v).trim(); if(!v) return; onCode(v); }
+
+  function renderSummary(){
+    var c={in:0,out:0,other:0,miss:0};
+    scanned.forEach(function(e){ c[e.kind]++; });
+    $("tIn").textContent=c.in; $("tOut").textContent=c.out; $("tOther").textContent=c.other; $("tMiss").textContent=c.miss;
+    $("sumTitle").textContent=scanned.length+" piece"+(scanned.length===1?"":"s")+" checked";
+    var order={out:0,miss:1,other:2,in:3};
+    var sorted=scanned.slice().sort(function(a,b){return order[a.kind]-order[b.kind];});
+    $("sumList").innerHTML = scanned.length ? sorted.map(function(e){
+      var tag = e.kind==="in"?"In stock":(e.kind==="out"?"Marked OUT on a job":(e.kind==="miss"?"NOT in the system":(e.status||"Here")));
+      var detail = e.kind==="miss" ? "Scan or type didn’t match any piece" :
+        ((e.status?esc(e.status):"")+(e.loc?(" · "+esc(e.loc)):"")+(e.cust&&e.cust!=="Inventory"?(" · "+esc(e.cust)):""));
+      return '<div class="item '+e.kind+'"><div class="nm">'+esc(e.name)+(e.num?(' <span style="color:#94a3b8;">#'+esc(e.num)+'</span>'):'')+'</div><div class="dt"><b>'+esc(tag)+'</b>'+(detail?(' — '+detail):'')+'</div></div>';
+    }).join("") : '<div style="color:#94a3b8;">Nothing scanned yet.</div>';
+  }
+  function showSummary(){ stopCamera(function(){ hide($("cam")); renderSummary(); show($("summary")); window.scrollTo(0,0); }); }
+
+  $("startBtn").onclick=openCamera;
+  $("done").onclick=showSummary;
+  $("manual").onclick=openManual;
+  $("sumClear").onclick=function(){ scanned=[]; hide($("summary")); show($("start"),"flex"); };
+  $("sumMore").onclick=function(){ openCamera(); };
+  $("sumClose").onclick=function(){ scanned=[]; hide($("summary")); show($("start"),"flex"); };
+
+  loadAssets(function(ok){ $("startStatus").textContent = ok ? (assets.length+" pieces loaded — ready") : "Couldn’t load inventory — check your connection and reopen."; });
+})();
+</script>
+</body>
+</html>
