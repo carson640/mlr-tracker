@@ -22,6 +22,7 @@ var SIGNOFF_COLS = ['id','json'];
 function doGet(e) {
   // API mode for the standalone live-camera scanner page: ?api=state returns JSON. Does not affect the normal app load.
   var __p = (e && e.parameter) || {};
+  if (__p.api === 'tidy' && __p.key === 'mlrtidy0623') { return ContentService.createTextOutput(normalizeAssets()).setMimeType(ContentService.MimeType.TEXT); }
   if (__p.api) { return apiResponse_(__p); }
   // Phone-camera deep link: ?scan=NUMBER (or ?find=NUMBER) from a QR label opens that piece.
   var scan = (e && e.parameter && (e.parameter.scan || e.parameter.find)) || '';
@@ -352,7 +353,8 @@ function normalizeAssets() {
     for (var i = 0; i < data.length; i++) {
       var r = data[i]; if (!S(r[col.id])) continue;
       var serial = S(r[col.serialNumber]), model = S(r[col.model]), mfr = S(r[col.manufacturer]), cap = S(r[col.capacity]);
-      var before = [serial, model, mfr, cap].join('');
+      var loc = S(r[col.location]), veh = S(r[col.vehicle]), dest = S(r[col.destination]);
+      var before = [serial, model, mfr, cap, loc, veh, dest].join('');
 
       // a spec ("500 CFM") sitting in the serial field → move it to capacity
       if (isSpec(serial)) { if (!isSpec(cap)) cap = serial; serial = ''; }
@@ -376,15 +378,23 @@ function normalizeAssets() {
       // a stray serial-like number sitting in capacity → move to an empty serial; clear money in capacity
       if (cap && !isSpec(cap)) { if (isMoney(cap)) cap = ''; else if (/^\d{5,}$/.test(cap)) { if (!serial) serial = cap; cap = ''; } }
 
+      // a compound code mistakenly in capacity (e.g. "CF-01T-...CFM") is not a real spec → clear it
+      if (cap && /[-_]/.test(cap)) cap = '';
+      // rename the two box trucks wherever they appear (location / vehicle / destination)
+      var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck' };
+      if (REN[loc.toLowerCase()]) loc = REN[loc.toLowerCase()];
+      if (REN[veh.toLowerCase()]) veh = REN[veh.toLowerCase()];
+      if (REN[dest.toLowerCase()]) dest = REN[dest.toLowerCase()];
       // duplicate make == model → keep one
       if (mfr && model && mfr.toLowerCase() === model.toLowerCase()) mfr = '';
       // collapse a whole-string doubling inside the model ("Moab 85 Moab 85")
       var mt = model.split(/\s+/);
       if (mt.length >= 2 && mt.length % 2 === 0) { var h = mt.length / 2; if (mt.slice(0, h).join(' ').toLowerCase() === mt.slice(h).join(' ').toLowerCase()) model = mt.slice(0, h).join(' '); }
 
-      var after = [serial, model, mfr, cap].join('');
+      var after = [serial, model, mfr, cap, loc, veh, dest].join('');
       if (after !== before) {
         r[col.serialNumber] = serial; r[col.model] = model; r[col.manufacturer] = mfr; r[col.capacity] = cap;
+        r[col.location] = loc; r[col.vehicle] = veh; r[col.destination] = dest;
         r[col.updatedAt] = new Date().toISOString(); r[col.updatedBy] = 'cleanup';
         n++;
       }
