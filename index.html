@@ -1605,7 +1605,7 @@ input.picker-search{ padding-left:42px; font-size:16px; }
         <div id="assetCards" class="equipment-list"></div>
       </section>
 
-      <section id="checkout" class="view"><div class="action-card"><h2>Check out equipment</h2><p>Use this when equipment leaves the shop, trailer, truck, or warehouse.</p><label>Find equipment<div class="picker-search-wrap"><span class="ps-icon">⌕</span><input id="checkoutSearch" class="picker-search" autocomplete="off" placeholder="Scan or type asset #, model, serial…" oninput="renderPicker('checkout')" /></div></label><button type="button" class="secondary" onclick="scanForCheckout()" style="margin:2px 0 12px;display:inline-flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Scan a label</button><div id="checkoutPick" class="pick-list"></div><div id="checkoutSelected" class="pick-selected" style="display:none;"></div><select id="checkoutAsset" style="display:none;"></select><label>Checked out to<input id="checkoutTo" placeholder="Name / crew / Roy's team" /></label><label>Location<div id="checkout-loc-picker" class="loc-picker">
+      <section id="checkout" class="view"><div class="action-card"><h2>Check out equipment</h2><p>Use this when equipment leaves the shop, trailer, truck, or warehouse.</p><label>Find equipment<div class="picker-search-wrap"><span class="ps-icon">⌕</span><input id="checkoutSearch" class="picker-search" autocomplete="off" placeholder="Scan or type asset #, model, serial…" oninput="renderPicker('checkout')" /></div></label><button type="button" class="secondary" onclick="scanForCheckout()" style="margin:2px 0 12px;display:inline-flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Scan a label</button><div id="checkoutPick" class="pick-list"></div><div id="checkoutSelected" class="pick-selected" style="display:none;"></div><select id="checkoutAsset" style="display:none;"></select><label>Job number <span class="opt" style="color:#DC2626;">required</span><input id="checkoutJobNo" placeholder="e.g. 24-1057" /></label><label>Job name <span class="opt">optional</span><input id="checkoutJobNm" placeholder="e.g. Smith — water loss" /></label><label>Checked out to<input id="checkoutTo" placeholder="Name / crew / Roy's team" /></label><label>Location<div id="checkout-loc-picker" class="loc-picker">
       <div class="loc-grid-btns" id="checkout-loc-btns"></div>
       <div class="loc-job-input" id="checkout-job-wrap">
         <input id="checkoutJobName" placeholder="Job name or address (e.g. 263 Main St)" />
@@ -1620,6 +1620,8 @@ input.picker-search{ padding-left:42px; font-size:16px; }
           <p>Send a whole job out at once. Set the destination once, add the pieces (scan, type, or add a whole location), then check them all out together.</p>
 
           <div class="bulk-dest-grid">
+            <label>Job number <span class="opt" style="color:#DC2626;">required</span><input id="bcoJobNo" placeholder="e.g. 24-1057" /></label>
+            <label>Job name <span class="opt">optional</span><input id="bcoJobNm" placeholder="e.g. Smith — water loss" /></label>
             <label>Checked out to (crew / person)<input id="bcoTo" placeholder="e.g. Roy's crew" /></label>
             <label>Job site / location<select id="bcoLoc" class="card-loc-select" style="width:100%;"></select></label>
             <label>Floor <span class="opt">optional</span><input id="bcoFloor" placeholder="e.g. 2nd floor / Basement" /></label>
@@ -1658,6 +1660,8 @@ input.picker-search{ padding-left:42px; font-size:16px; }
           <p>Scan equipment onto a truck or trailer, send it to a job, then drop it at the job when the truck arrives.</p>
 
           <div class="bulk-dest-grid">
+            <label>Job number <span class="opt" style="color:#DC2626;">required</span><input id="loadJobNo" placeholder="e.g. 24-1057" /></label>
+            <label>Job name <span class="opt">optional</span><input id="loadJobNm" placeholder="e.g. Smith — water loss" /></label>
             <label>Vehicle <span class="opt">truck / trailer</span><input id="loadVehicle" list="loadVehicleList" autocomplete="off" placeholder="e.g. Ford Box Truck" /><datalist id="loadVehicleList"></datalist></label>
             <label>Destination job / site<select id="loadDest" class="card-loc-select" style="width:100%;"></select></label>
             <label>Crew / person <span class="opt">optional</span><input id="loadTo" placeholder="e.g. Roy's crew" /></label>
@@ -2130,6 +2134,9 @@ window.bulkClearBatch=function(){ bulkBatch.clear(); renderBulkBatch(); const m=
 window.bulkCheckoutSubmit=function(){
   const n0=bulkBatch.size;
   if(n0===0){ alert('Add some equipment to the batch first — scan, type, or add a whole location.'); return; }
+  const jobNo=($('bcoJobNo')?.value||'').trim();
+  const jobNm=($('bcoJobNm')?.value||'').trim();
+  if(!jobNo){ alert('Enter the job number before checking out.'); if($('bcoJobNo'))$('bcoJobNo').focus(); return; }
   const to=($('bcoTo')?.value||'').trim();
   let loc=($('bcoLoc')?.value||'').trim();
   if(loc==='__new__'){ loc=(prompt('Job site / location name?')||'').trim(); }
@@ -2138,11 +2145,11 @@ window.bulkCheckoutSubmit=function(){
   const ret=($('bcoReturn')?.value||'');
   if(!to && !loc){ if(!confirm('No crew or job site set. Check out '+n0+' piece'+(n0===1?'':'s')+' anyway?')) return; }
   const ids=[...bulkBatch]; let n=0;
-  ids.forEach(id=>{ const a=assets.find(x=>x.id===id); if(!a) return; a.status='Checked out'; a.custodian=to||currentUser(); if(loc) a.location=normalizeLocation(loc); a.floor=floor; a.room=room; a.expectedReturn=ret||''; n++; });
-  addLog('Bulk checked out '+n+' piece'+(n===1?'':'s')+(to?' to '+to:'')+(loc?' at '+loc:'')+((floor||room)?' ('+[floor,room].filter(Boolean).join(' / ')+')':'')+(ret?', due '+ret:'')+'.');
+  ids.forEach(id=>{ const a=assets.find(x=>x.id===id); if(!a) return; a.status='Checked out'; a.custodian=to||currentUser(); if(loc) a.location=normalizeLocation(loc); a.jobNumber=jobNo; a.jobName=jobNm; a.floor=floor; a.room=room; a.expectedReturn=ret||''; n++; });
+  addLog('Bulk checked out '+n+' piece'+(n===1?'':'s')+' for job '+jobNo+(jobNm?' '+jobNm:'')+(to?' to '+to:'')+(loc?' at '+loc:'')+((floor||room)?' ('+[floor,room].filter(Boolean).join(' / ')+')':'')+(ret?', due '+ret:'')+'.');
   bulkBatch.clear();
   save();
-  ['bcoTo','bcoFloor','bcoRoom','bcoReturn'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+  ['bcoJobNo','bcoJobNm','bcoTo','bcoFloor','bcoRoom','bcoReturn'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
   renderBulkBatch();
   setTab('inventory');
   try{ showToast('✓ Checked out '+n+' piece'+(n===1?'':'s')+(to?' to '+to:'')); }catch(e){}
@@ -2198,6 +2205,9 @@ window.loadClearBatch=function(){ loadBatch.clear(); renderLoadBatch(); var m=$(
 window.loadSubmit=function(){
   var n0=loadBatch.size;
   if(n0===0){ alert('Scan some equipment onto the load first.'); return; }
+  var jobNo=(($('loadJobNo')&&$('loadJobNo').value)||'').trim();
+  var jobNm=(($('loadJobNm')&&$('loadJobNm').value)||'').trim();
+  if(!jobNo){ alert('Enter the job number before sending out.'); if($('loadJobNo'))$('loadJobNo').focus(); return; }
   var veh=(($('loadVehicle')&&$('loadVehicle').value)||'').trim();
   var dest=(($('loadDest')&&$('loadDest').value)||'').trim();
   if(dest==='__new__'){ dest=(prompt('Destination job / site name?')||'').trim(); }
@@ -2208,14 +2218,14 @@ window.loadSubmit=function(){
   if(!veh && !dest){ if(!confirm('No vehicle or destination set. Send '+n0+' piece'+(n0===1?'':'s')+' out anyway?')) return; }
   var ids=Array.from(loadBatch); var n=0;
   ids.forEach(function(id){ var a=assets.find(function(x){return x.id===id;}); if(!a) return;
-    a.status='Checked out'; a.custodian=to||currentUser(); a.vehicle=veh; a.floor=floor; a.room=room; a.expectedReturn=ret||'';
+    a.status='Checked out'; a.custodian=to||currentUser(); a.vehicle=veh; a.jobNumber=jobNo; a.jobName=jobNm; a.floor=floor; a.room=room; a.expectedReturn=ret||'';
     if(veh){ a.location=veh; a.destination=dest||''; }
     else { if(dest) a.location=normalizeLocation(dest); a.destination=''; }
     n++; });
-  addLog((veh?('Loaded '+n+' piece'+(n===1?'':'s')+' onto '+veh):('Sent '+n+' piece'+(n===1?'':'s')+' out'))+(dest?(' for '+dest):'')+(to?(' ('+to+')'):'')+(ret?(', due '+ret):'')+'.');
+  addLog((veh?('Loaded '+n+' piece'+(n===1?'':'s')+' onto '+veh):('Sent '+n+' piece'+(n===1?'':'s')+' out'))+' for job '+jobNo+(jobNm?' '+jobNm:'')+(dest?(' to '+dest):'')+(to?(' ('+to+')'):'')+(ret?(', due '+ret):'')+'.');
   loadBatch.clear();
   save();
-  ['loadFloor','loadRoom','loadReturn','loadScan'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  ['loadJobNo','loadJobNm','loadFloor','loadRoom','loadReturn','loadScan'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
   var m=$('loadScanMsg'); if(m){ m.textContent='✓ Sent out '+n+' piece'+(n===1?'':'s')+(veh?(' on '+veh):''); m.className='bulk-scan-msg ok'; }
   renderLoadBatch(); renderInTransit();
   try{ showToast('✓ '+n+' sent out'+(veh?(' on '+veh):'')); }catch(e){}
@@ -2352,6 +2362,8 @@ window.openAssetDetail=function(id){
       <span class="pill ${cls(a.status)}">${a.status}</span>
       ${od?`<span style="color:var(--red);font-weight:800;font-size:12px;">⚠ OVERDUE</span>`:''}
     </div>
+    ${row('Job number', escapeHtml(a.jobNumber||''))}
+    ${row('Job name', escapeHtml(a.jobName||''))}
     ${row('Location', `<select class="card-loc-select" style="max-width:220px;" onclick="event.stopPropagation();" onchange="moveAssetTo('${a.id}',this.value); setTimeout(()=>openAssetDetail('${a.id}'),60);">${locOptions(a.location||'')}</select>`)}
     ${row('Floor <span style="color:var(--muted2);font-weight:400;">(on jobsite)</span>', `<input class="dp-inline" value="${escapeHtml(a.floor||'')}" placeholder="—" onclick="event.stopPropagation();" onchange="setAssetFloor('${a.id}', this.value)">`)}
     ${row('Room / area', `<input class="dp-inline" value="${escapeHtml(a.room||'')}" placeholder="—" onclick="event.stopPropagation();" onchange="setAssetRoom('${a.id}', this.value)">`)}
@@ -2714,8 +2726,8 @@ $('search').onchange = onSearchInput;
   };
 });
 $('dashSearch').oninput=renderDashResults;$('signoffSearch').oninput=renderSignoffs;
-function setAssetCheckout(a,to,loc,ret){a.status='Checked out';a.custodian=to||currentUser();a.location=loc||a.location||'Checked out';a.expectedReturn=ret||'';addLog(`${a.assetNumber} checked out to ${a.custodian} at ${a.location}.`);}
-$('checkoutBtn').onclick=()=>{const a=assets.find(x=>x.id===(pickState.checkout||$('checkoutAsset').value));if(!a){alert('Find and tap the equipment first.');return;}setAssetCheckout(a,$('checkoutTo').value.trim(),$('checkoutLocation').value.trim(),$('checkoutReturn').value);a.floor=($('checkoutFloor')?.value||'').trim();a.room=($('checkoutRoom')?.value||'').trim();save();clearPick('checkout');$('checkoutTo').value='';if($('checkoutFloor'))$('checkoutFloor').value='';if($('checkoutRoom'))$('checkoutRoom').value='';setTab('inventory');try{showToast('✓ '+(a.assetNumber||'Equipment')+' checked out');}catch(e){}};
+function setAssetCheckout(a,to,loc,ret,jobNo,jobNm){a.status='Checked out';a.custodian=to||currentUser();a.location=loc||a.location||'Checked out';a.expectedReturn=ret||'';if(jobNo!=null)a.jobNumber=jobNo;if(jobNm!=null)a.jobName=jobNm;addLog(`${a.assetNumber} checked out to ${a.custodian} at ${a.location}${a.jobNumber?(' (job '+a.jobNumber+(a.jobName?' '+a.jobName:'')+')'):''}.`);}
+$('checkoutBtn').onclick=()=>{const a=assets.find(x=>x.id===(pickState.checkout||$('checkoutAsset').value));if(!a){alert('Find and tap the equipment first.');return;}const jobNo=($('checkoutJobNo')?.value||'').trim();const jobNm=($('checkoutJobNm')?.value||'').trim();if(!jobNo){alert('Enter the job number before checking out.');if($('checkoutJobNo'))$('checkoutJobNo').focus();return;}setAssetCheckout(a,$('checkoutTo').value.trim(),$('checkoutLocation').value.trim(),$('checkoutReturn').value,jobNo,jobNm);a.floor=($('checkoutFloor')?.value||'').trim();a.room=($('checkoutRoom')?.value||'').trim();save();clearPick('checkout');$('checkoutTo').value='';if($('checkoutJobNo'))$('checkoutJobNo').value='';if($('checkoutJobNm'))$('checkoutJobNm').value='';if($('checkoutFloor'))$('checkoutFloor').value='';if($('checkoutRoom'))$('checkoutRoom').value='';setTab('inventory');try{showToast('✓ '+(a.assetNumber||'Equipment')+' checked out');}catch(e){}};
 window.quickCheckout=id=>{const a=assets.find(x=>x.id===id);if(!a)return;setTab('checkout');selectPick('checkout',id);};
 window.markReturned=id=>{const a=assets.find(x=>x.id===id);if(!a)return;a.status='Needs cleaning';a.custodian='Returned / dirty';a.expectedReturn='';addLog(`${a.assetNumber} returned and marked needs cleaning.`);save();};
 var returnSel=new Set();
@@ -2743,7 +2755,8 @@ function renderReturnList(){
   var html=crews.map(function(crew){
     var rows=groups[crew].sort(function(p,r){return (classOf(p)+idShort(p)).localeCompare(classOf(r)+idShort(r));}).map(function(a){
       var sel=returnSel.has(a.id);
-      var meta=idShort(a)+(a.location?(' · '+escapeHtml(a.location)):'')+(floorRoomStr(a)?(' · '+escapeHtml(floorRoomStr(a))):'');
+      var jobStr=(a.jobNumber?('Job '+escapeHtml(a.jobNumber)+(a.jobName?(' '+escapeHtml(a.jobName)):'')):'');
+      var meta=(jobStr?(jobStr+' · '):'')+idShort(a)+(a.location?(' · '+escapeHtml(a.location)):'')+(floorRoomStr(a)?(' · '+escapeHtml(floorRoomStr(a))):'');
       return '<button type="button" onclick="returnToggle(\''+a.id+'\')" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;border:1px solid var(--line,#e2e2e2);border-radius:10px;margin-bottom:8px;background:'+(sel?'#eaf3ff':'#fff')+';cursor:pointer;">'+
         '<span style="flex:0 0 auto;width:22px;height:22px;border-radius:6px;border:2px solid '+(sel?'#1769d6':'#c2c2c2')+';background:'+(sel?'#1769d6':'#fff')+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;">'+(sel?'✓':'')+'</span>'+
         '<span style="flex:1;min-width:0;"><span style="font-weight:700;">'+escapeHtml(classOf(a))+'</span> <span style="color:var(--muted,#666);">'+escapeHtml(makeModel(a)||'')+'</span><br><span style="font-size:12px;color:var(--muted,#666);">'+meta+'</span></span>'+

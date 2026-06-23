@@ -67,6 +67,8 @@
       <div class="row"><h2 id="revTitle">Scanned</h2><button class="linkbtn" id="revCancel">Cancel</button></div>
       <div id="revList" style="margin:12px 0;"></div>
       <div class="grid2">
+        <label class="fld">Job number <span style="color:#f87171;">required</span><input id="fJobNo" autocomplete="off" /></label>
+        <label class="fld">Job name (optional)<input id="fJobNm" autocomplete="off" /></label>
         <label class="fld">Check out to (crew / person)<input id="fTo" autocomplete="off" /></label>
         <label class="fld">Destination job / site<input id="fDest" autocomplete="off" /></label>
         <label class="fld">Vehicle (optional)<input id="fVeh" autocomplete="off" /></label>
@@ -225,8 +227,10 @@
   function sendOut(){
     var msg=$("revMsg");
     if(!scanned.length){ msg.innerHTML='<span style="color:#fbbf24;">Nothing to send.</span>'; return; }
+    var jobNo=$("fJobNo").value.trim();
+    if(!jobNo){ msg.innerHTML='<span style="color:#fbbf24;">Enter the job number before sending out.</span>'; try{$("fJobNo").focus();}catch(e){} return; }
     var codes=scanned.map(function(a){ return numOf(a); });
-    var payload={ action:"loadout", codes:codes, vehicle:$("fVeh").value.trim(), destination:$("fDest").value.trim(), custodian:$("fTo").value.trim(), floor:$("fFloor").value.trim(), room:$("fRoom").value.trim(), expectedReturn:$("fRet").value.trim(), user:($("fTo").value.trim()||"scanner") };
+    var payload={ action:"loadout", codes:codes, jobNumber:jobNo, jobName:$("fJobNm").value.trim(), vehicle:$("fVeh").value.trim(), destination:$("fDest").value.trim(), custodian:$("fTo").value.trim(), floor:$("fFloor").value.trim(), room:$("fRoom").value.trim(), expectedReturn:$("fRet").value.trim(), user:($("fTo").value.trim()||"scanner") };
     var btn=$("revSend"); btn.disabled=true; msg.innerHTML='<span style="color:#cbd5e1;">Saving… (first save can take a few seconds while the system wakes up)</span>';
     fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
       .then(function(r){return r.text();}).then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d=null;} btn.disabled=false;
