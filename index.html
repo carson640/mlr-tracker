@@ -1963,7 +1963,24 @@ $('saveUserBtn').onclick=()=>{localStorage.setItem(USER_KEY,currentUser());addLo
 // and some are missing a serial number — so each is shown only when present.
 function isRfid(v){ return /^(2415|2145)\d{2,}$/.test(String(v||'').trim()); }
 function rfidOf(a){ if(isRfid(a&&a.assetNumber)) return String(a.assetNumber).trim(); if(isRfid(a&&a.barcode)) return String(a.barcode).trim(); return ''; }
-function serialOf(a){ const s=String((a&&a.serialNumber)||'').trim(); if(s) return s; const combo=(String((a&&a.manufacturer)||'')+' '+String((a&&a.model)||'')).trim(); const m=combo.match(/(\d{5,})\s*$/); if(m) return m[1]; const an=String((a&&a.assetNumber)||'').trim(); if(an && !isRfid(an)) return an; return ''; }
+function isSpecVal(v){ v=String(v==null?'':v); return /\d/.test(v) && /(cfm|gallons?|gal\b|pints?|ppd|amps?|volts?|watts?|hp\b|btu|psi|gpm|inch(?:es)?|"|liters?|litres?|micron|µm|sq\.?\s?ft|cu\.?\s?ft)\b/i.test(v); }
+function isMoneyish(v){ v=String(v==null?'':v).trim(); return v==='$' || /^\$/.test(v) || /^\$?\d[\d,]*\.\d{2}$/.test(v); }
+function serialOf(a){
+  var s=String((a&&a.serialNumber)||'').trim();
+  if(s && s!=='—' && s!=='-' && !isMoneyish(s) && !isSpecVal(s)) return s;        // a real serial already on file
+  var combo=(String((a&&a.manufacturer)||'')+' '+String((a&&a.model)||'')).trim(); // serial often typed onto the end of the name
+  var last=combo.split(/\s+/).pop()||'';
+  if(/\d{5,}/.test(last) && !isSpecVal(last)){ var tok=last.replace(/[^A-Za-z0-9-]/g,''); if(tok) return tok; }
+  var an=String((a&&a.assetNumber)||'').trim(); if(an && !isRfid(an) && !isMoneyish(an)) return an;
+  return '';
+}
+function capacityOf(a){
+  var c=String((a&&a.capacity)||'').trim();
+  if(isSpecVal(c)) return c;                                                        // real spec in the capacity field
+  var s=String((a&&a.serialNumber)||'').trim(); if(isSpecVal(s)) return s;          // a spec ("500 CFM") got typed into the serial field
+  if(c && !isMoneyish(c) && !isRfid(c) && !/^\d{4,}$/.test(c)) return c;            // other descriptive capacity (not a bare serial/asset/money)
+  return '';
+}
 function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function classOf(a){ return String((a&&a.type)||'').trim() || String((a&&a.category)||'').trim() || 'Equipment'; }
 function makeModel(a){
@@ -2400,7 +2417,7 @@ window.openAssetDetail=function(id){
     ${row('Expected return', a.expectedReturn?('Due '+a.expectedReturn):'')}
     ${row('Serial #', serialOf(a)||'Not recorded')}
     ${row('RFID tag', rfidOf(a))}
-    ${row('Capacity', a.capacity)}
+    ${row('Capacity / specs', capacityOf(a))}
     ${row('Rate', a.rentalCost)}
     ${row('Last cleaned', a.lastCleanedAt)}
     ${row('Cleaned by', a.cleanedBy)}
@@ -2660,7 +2677,7 @@ function renderCards(){
       </div>
       ${od?`<div class="overdue-banner">⚠ Return overdue since ${a.expectedReturn}</div>`:''}
       <div class="meta"><b>Serial #</b> ${serialOf(a)||'<span style="color:var(--muted2);">Not recorded</span>'}${rfidOf(a)?`<br><b>RFID tag</b> ${rfidOf(a)}`:''}</div>
-      <div class="meta">Capacity: ${a.capacity||'—'} · Rate: ${a.rentalCost||'—'}</div>
+      <div class="meta">Capacity: ${capacityOf(a)||'—'} · Rate: ${a.rentalCost||'—'}</div>
       <div class="meta"><b>Location</b><br><select class="card-loc-select" onclick="event.stopPropagation();" onchange="moveAssetTo('${a.id}',this.value)">${locOptions(a.location||'')}</select></div>
       ${floorRoomStr(a)?`<div class="meta"><b>On site</b><br>${escapeHtml(floorRoomStr(a))}</div>`:''}
       <div class="meta"><b>Assigned to</b><br>${a.custodian&&a.custodian!=='Inventory'?`<span class="assigned-link" data-assigned="${escapeHtml(a.custodian)}" onclick="event.stopPropagation();filterByAssigned(this.dataset.assigned)">${escapeHtml(a.custodian)}</span>`:'Inventory'}${a.cleanedBy?`<br>Cleaned by ${escapeHtml(a.cleanedBy)} · QC ${escapeHtml(a.qcBy)||'—'}`:''}</div>
