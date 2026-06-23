@@ -316,3 +316,86 @@ function applyLoadout_(req) {
     lock.releaseLock();
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * ONE-TIME CLEANUP — tidy the Assets columns so serial / specs / make-model
+ * live in the right fields. Makes a full backup tab first, so it's reversible.
+ * Run manually from the editor (select normalizeAssets, click Run).
+ * ─────────────────────────────────────────────────────────────────────────── */
+function normalizeAssets() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(120000);
+  try {
+    ensureSheets_();
+    var ss = ss_();
+    var sh = sheet_('Assets', ASSET_COLS);
+    var last = sh.getLastRow();
+    if (last < 2) return 'No data rows to tidy.';
+
+    // 1) Full safety backup (a complete copy of the Assets tab).
+    var stamp = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone() || 'GMT', 'yyyyMMdd-HHmmss');
+    var backup = 'Assets_backup_' + stamp;
+    sh.copyTo(ss).setName(backup);
+
+    var rng = sh.getRange(2, 1, last - 1, ASSET_COLS.length);
+    var data = rng.getValues();
+    var col = {}; for (var c = 0; c < ASSET_COLS.length; c++) col[ASSET_COLS[c]] = c;
+
+    var S = function (v) { return String(v == null ? '' : v).trim(); };
+    var isSpec = function (v) { v = S(v); return /\d/.test(v) && /(cfm|gallons?|gal\b|pints?|ppd|amps?|volts?|watts?|hp\b|btu|psi|gpm|inch(?:es)?|"|liters?|litres?|micron|µm|sq\.?\s?ft|cu\.?\s?ft)\b/i.test(v); };
+    var isMoney = function (v) { v = S(v); return v === '$' || /^\$/.test(v) || /^\$?\d[\d,]*\.\d{2}$/.test(v); };
+    var esc = function (s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+    var lastTok = function (s) { var p = S(s).split(/\s+/); return p.length ? p[p.length - 1] : ''; };
+    var stripLast = function (s) { return S(s).replace(/\s*\S+\s*$/, '').trim(); };
+
+    var n = 0;
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i]; if (!S(r[col.id])) continue;
+      var serial = S(r[col.serialNumber]), model = S(r[col.model]), mfr = S(r[col.manufacturer]), cap = S(r[col.capacity]);
+      var before = [serial, model, mfr, cap].join('');
+
+      // a spec ("500 CFM") sitting in the serial field → move it to capacity
+      if (isSpec(serial)) { if (!isSpec(cap)) cap = serial; serial = ''; }
+      // money / placeholder junk in the serial field → clear it
+      if (serial === '—' || serial === '-' || isMoney(serial)) serial = '';
+
+      if (serial) {
+        // a real serial that also trails the name → remove the trailing copy from the name
+        var re = new RegExp('[\\s#:_-]*' + esc(serial) + '\\s*$', 'i');
+        if (re.test(model)) model = model.replace(re, '').trim();
+        else if (re.test(mfr)) mfr = mfr.replace(re, '').trim();
+      } else {
+        // serial typed onto the end of the name (5+ consecutive digits) → pull it into the serial column
+        var lm = lastTok(model);
+        if (/\d{5,}/.test(lm) && !isSpec(lm)) { serial = lm.replace(/[^A-Za-z0-9-]/g, ''); model = stripLast(model); }
+        else { var lf = lastTok(mfr); if (/\d{5,}/.test(lf) && !isSpec(lf)) { serial = lf.replace(/[^A-Za-z0-9-]/g, ''); mfr = stripLast(mfr); } }
+      }
+
+      // a stray serial-like number sitting in capacity → move to an empty serial; clear money in capacity
+      if (cap && !isSpec(cap)) { if (isMoney(cap)) cap = ''; else if (/^\d{5,}$/.test(cap)) { if (!serial) serial = cap; cap = ''; } }
+
+      // duplicate make == model → keep one
+      if (mfr && model && mfr.toLowerCase() === model.toLowerCase()) mfr = '';
+      // collapse a whole-string doubling inside the model ("Moab 85 Moab 85")
+      var mt = model.split(/\s+/);
+      if (mt.length >= 2 && mt.length % 2 === 0) { var h = mt.length / 2; if (mt.slice(0, h).join(' ').toLowerCase() === mt.slice(h).join(' ').toLowerCase()) model = mt.slice(0, h).join(' '); }
+
+      var after = [serial, model, mfr, cap].join('');
+      if (after !== before) {
+        r[col.serialNumber] = serial; r[col.model] = model; r[col.manufacturer] = mfr; r[col.capacity] = cap;
+        r[col.updatedAt] = new Date().toISOString(); r[col.updatedBy] = 'cleanup';
+        n++;
+      }
+    }
+
+    if (n) {
+      rng.setValues(data);
+      bumpVersion_();
+      sheet_('Log', LOG_COLS).appendRow([Utilities.getUuid(), new Date().toISOString(), 'cleanup',
+        'Tidied ' + n + ' row' + (n === 1 ? '' : 's') + ' — routed specs/serials/names to the right columns. Backup tab: ' + backup]);
+    }
+    return 'Done. Tidied ' + n + ' of ' + data.length + ' rows. Backup tab: ' + backup;
+  } finally {
+    lock.releaseLock();
+  }
+}
