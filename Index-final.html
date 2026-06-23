@@ -1809,6 +1809,8 @@ function normalizeLocation(l){
     'trailer 2':       'Trailer #2',
     'trailer#2':       'Trailer #2',
     'unassigned':      'Unassigned',
+    'smn7242':         'Vehicle SMN7242',
+    'vehicle smn7242': 'Vehicle SMN7242',
     'cubicals':        'Warehouse',  // cubicles → warehouse
     'xxxxxx':          'Unassigned',
   };
@@ -2169,7 +2171,7 @@ window.bulkCheckoutSubmit=function(){
 // ── LOAD & DELIVER (scan onto a vehicle, send to a job, drop on arrival) ──────
 let loadBatch = new Set();
 function knownVehicles(){
-  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck'];
+  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck','Vehicle SMN7242'];
   var used=[]; assets.forEach(function(a){ if(a.vehicle && fixedVeh.indexOf(a.vehicle)<0 && used.indexOf(a.vehicle)<0) used.push(a.vehicle); });
   return fixedVeh.concat(used.sort());
 }
@@ -3059,6 +3061,7 @@ const FIXED_LOCATIONS = [
   'Ready Restoration GMC Box Truck',
   'Office Space',
   'Repair Room',
+  'Vehicle SMN7242',
 ];
 
 function buildLocPicker(btnContainerId, jobWrapId, jobInputId, hiddenId, displayId, currentVal) {
@@ -3596,7 +3599,7 @@ const SPECS_DB = {
   },
 
   'storm|lgr 850': {
-    cfm: '210', ppd: '85 PPD (AHAM) / 180 PPD (Saturation)', weightLbs: 70.5,
+    cfm: '210', ppd: '85 PPD (AHAM) / 180 PPD (Saturation)', weightLbs: 62,
     dimensions: '22.8" L × 13.7" W × 17.3" H',
     filterStages: 1,
     filters: [
@@ -4190,13 +4193,15 @@ function renderSpecCard(a) {
 }
 
 // ── TRUCK WEIGHT CALCULATOR ───────────────────────────────────────────────────
-// Vehicle payload limits — equipment cargo only (not including trailer/truck tare weight)
-// 48ft Kentucky semi trailers: ~10,000–12,000 lbs empty, federal GVW limit 80,000 lbs combined.
-// Practical equipment payload assuming ~35,000 lbs tractor+trailer tare = ~45,000 lbs available.
-// Using conservative 40,000 lbs as equipment payload limit per trailer.
+// Vehicle payload limits — equipment cargo only (NOT including trailer/truck tare weight).
+// 48ft Kentucky enclosed semi trailers: GVWR 65,000 lbs (trailer only). The built-in steel side
+// racks run nearly the full length of both walls (stop ~5 ft short of the rear door), so real tare
+// is ~14,000–17,000 lbs — heavier than a bare trailer. Owner measured Trailer #1 at 40,000+ lbs
+// loaded incl. trailer. Cargo is also capped by the 80,000 lb federal combined GVW (tractor+trailer+load).
+// Conservative equipment cap per trailer ≈ 48,000 lbs (65,000 GVWR − ~16,000 tare w/ racks).
 const VEHICLE_LIMITS = {
-    'Trailer #1': 53000,// GVWR 65,000 lbs - est. 12,000 lbs tare = ~53,000 lbs payload
-    'Trailer #2': 53000,
+    'Trailer #1': 48000,// GVWR 65,000 − ~16,000 tare (incl. steel side racks) ≈ 48,000 lbs equipment
+    'Trailer #2': 48000,
     'Ready Restoration Ford Box Truck': 1200,// GVWR 9,900 lbs confirmed; ~1,200 lbs net payload est.
     'Ready Restoration GMC Box Truck': 4000,// GVWR 12,300 lbs confirmed; ~4,000 lbs net payload est.
     'Ram Van': 3750,// Ram ProMaster 1500: GVWR 8,550 lbs, ~3,750 lbs payload
@@ -4207,16 +4212,16 @@ const VEHICLE_SPECS = {
       mfgDate: 'February 1996',
       vin: '1KKVE4828TL105639',
       tag: 'GA YME436 (Gwinnett Co.) — Permanent Trailer tag',
-      emptyWeight: '~11,000–13,000 lbs (verify on scale)',
+      emptyWeight: '~14,000–17,000 lbs incl. steel side racks (verify empty on scale)',
       gvwr: '65,000 lbs',
       gawr: '20,000 lbs per axle',
-      payload: '~52,000 lbs max (GVWR minus trailer tare)',
+      payload: '~48,000 lbs equipment (conservative — GVWR − ~16,000 tare w/ racks; also held under 80,000 lb combined GVW)',
       axles: 'Tandem axles — 20,000 lbs each',
       tireSize: '255/70R 22.5 Radial',
       rimSize: '22.5 × 8.25',
       tirePSI: '105 PSI (cold)',
       tireCount: '8 tires total (dual rear axles)',
-      note: 'GVWR 65,000 lbs is trailer only — does not include tractor weight. Sequential build with Trailer #2 (serial 105639 vs 105638, tags YME436/YME435). Verify tare at a CAT scale for exact payload.'
+      note: 'Owner measured 40,000+ lbs loaded incl. trailer. Steel storage racks run nearly the full length of both walls (stop ~5 ft short of the rear door) — they raise tare well above a bare trailer. GVWR 65,000 lbs is trailer only (no tractor). Sequential build with Trailer #2 (serial 105639 vs 105638, tags YME436/YME435). Verify empty tare at a CAT scale.'
     },
     'Trailer #2': {
       type: 'Kentucky Manufacturing Co. 48ft Enclosed Semi Trailer',
@@ -4225,16 +4230,16 @@ const VEHICLE_SPECS = {
       serial: '105638',
       tag: 'GA YME435 (Gwinnett Co.) — Permanent Trailer tag',
       inspection: 'Annual inspection July 2025 — AI Storage Solutions, Norcross GA',
-      emptyWeight: '~11,000–13,000 lbs (verify at CAT scale)',
+      emptyWeight: '~14,000–17,000 lbs incl. steel side racks (verify at CAT scale)',
       gvwr: '65,000 lbs (confirmed — VIN plate)',
       gawr: '20,000 lbs per axle (confirmed)',
-      payload: '~52,000 lbs max (GVWR minus trailer tare)',
+      payload: '~48,000 lbs equipment (conservative — GVWR − ~16,000 tare w/ racks; also held under 80,000 lb combined GVW)',
       axles: 'Tandem axles — 20,000 lbs each',
       tireSize: '255/70R 22.5 Radial',
       rimSize: '22.5 × 8.25',
       tirePSI: '105 PSI (cold)',
       tireCount: '8 tires total (dual rear axles)',
-      note: 'Sequential build with Trailer #1 (serial 105638 vs 105639, tags YME435/YME436). Identical specs confirmed. GVWR 65,000 lbs trailer only — does not include tractor.'
+      note: 'Identical build to Trailer #1 — assume the same steel side racks and ~14,000–17,000 lb tare; weigh loaded at a CAT scale to confirm. Sequential build with Trailer #1 (serial 105638 vs 105639, tags YME435/YME436). GVWR 65,000 lbs trailer only (no tractor).'
     },
     'Ready Restoration Ford Box Truck': {
       type: '2012 Ford E-350 Super Duty — Unicell Aerocell CW 12ft Body (SRW)',
@@ -4275,6 +4280,7 @@ const VEHICLE_SPECS = {
       note: 'All specs confirmed from GM chassis and Unicell body stickers. Tire is LT225/75R16D — note Load Range D not E. Rear runs dual configuration at same PSI as front (65 PSI cold).'
     },
     'Ram Van': { type: 'Ram ProMaster/1500 Van', emptyWeight: '~4,500 lbs', gvwr: '~6,500–8,550 lbs', payload: '~2,000–2,500 lbs', axles: 'Single rear axle', note: 'Check door jamb sticker for exact GVWR.' },
+    'Vehicle SMN7242': { type: '5th vehicle — make/model TBD (plate SMN7242)', emptyWeight: 'TBD', gvwr: 'TBD — send door-jamb sticker', payload: 'TBD', axles: 'TBD', note: 'New 5th vehicle added from inventory (plate SMN7242), currently holding 30 pieces. Send me the make/model + GVWR from the door-jamb sticker and I will finish its specs and set a payload limit.' },
   };
 
 window.renderWeightTab = function() {
@@ -4284,7 +4290,7 @@ window.renderWeightTab = function() {
   // VEHICLE_LIMITS and VEHICLE_SPECS defined globally above
 
 
-  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van'];
+  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van', 'Vehicle SMN7242'];
   const vehicleAssets = {};
   vehicles.forEach(v => {
     vehicleAssets[v] = assets.filter(a => (a.location || '').toLowerCase() === v.toLowerCase());

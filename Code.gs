@@ -355,7 +355,8 @@ function normalizeAssets() {
       var r = data[i]; if (!S(r[col.id])) continue;
       var serial = S(r[col.serialNumber]), model = S(r[col.model]), mfr = S(r[col.manufacturer]), cap = S(r[col.capacity]);
       var loc = S(r[col.location]), veh = S(r[col.vehicle]), dest = S(r[col.destination]);
-      var before = [serial, model, mfr, cap, loc, veh, dest].join('');
+      var an = S(r[col.assetNumber]), rc = S(r[col.rentalCost]), typ = S(r[col.type]);
+      var before = [serial, model, mfr, cap, loc, veh, dest, an, rc, typ].join('');
 
       // a spec ("500 CFM") sitting in the serial field → move it to capacity
       if (isSpec(serial)) { if (!isSpec(cap)) cap = serial; serial = ''; }
@@ -381,8 +382,19 @@ function normalizeAssets() {
 
       // a compound code mistakenly in capacity (e.g. "CF-01T-...CFM") is not a real spec → clear it
       if (cap && cap === S(r[col.assetNumber])) cap = '';
+      // typo fix: "Vaccum" -> "Vacuum" in the type column
+      if (typ) typ = typ.replace(/Vaccum/g, 'Vacuum');
+      // a bare "$" or other non-numeric junk in the rate field -> clear
+      if (rc && !/\d/.test(rc)) rc = '';
+      // money junk in the model field -> clear
+      if (model && isMoney(model)) model = '';
+      // a spec or money value sitting in the manufacturer field -> reroute to capacity / clear
+      if (mfr && isSpec(mfr)) { if (!isSpec(cap)) cap = mfr; mfr = ''; } else if (mfr && isMoney(mfr)) mfr = '';
+      // a spec/money value or a bare location word sitting in the asset-number field -> reroute / clear
+      if (an && (isSpec(an) || isMoney(an))) { if (!isSpec(cap)) cap = an; an = ''; }
+      else if (an && /^(storage|warehouse|trailer|repair|shop|office|yard|unassigned|inventory|returned|dirty|available)$/i.test(an)) an = '';
       // rename the two box trucks wherever they appear (location / vehicle / destination)
-      var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck' };
+      var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck', 'smn7242': 'Vehicle SMN7242' };
       if (REN[loc.toLowerCase()]) loc = REN[loc.toLowerCase()];
       if (REN[veh.toLowerCase()]) veh = REN[veh.toLowerCase()];
       if (REN[dest.toLowerCase()]) dest = REN[dest.toLowerCase()];
@@ -392,10 +404,11 @@ function normalizeAssets() {
       var mt = model.split(/\s+/);
       if (mt.length >= 2 && mt.length % 2 === 0) { var h = mt.length / 2; if (mt.slice(0, h).join(' ').toLowerCase() === mt.slice(h).join(' ').toLowerCase()) model = mt.slice(0, h).join(' '); }
 
-      var after = [serial, model, mfr, cap, loc, veh, dest].join('');
+      var after = [serial, model, mfr, cap, loc, veh, dest, an, rc, typ].join('');
       if (after !== before) {
         r[col.serialNumber] = serial; r[col.model] = model; r[col.manufacturer] = mfr; r[col.capacity] = cap;
         r[col.location] = loc; r[col.vehicle] = veh; r[col.destination] = dest;
+        r[col.assetNumber] = an; r[col.rentalCost] = rc; r[col.type] = typ;
         r[col.updatedAt] = new Date().toISOString(); r[col.updatedBy] = 'cleanup';
         n++;
       }
