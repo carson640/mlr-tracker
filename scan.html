@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>MLR Live Scanner</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:#0b1220;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+  /* start screen */
+  #start{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center;background:linear-gradient(150deg,#16294d,#1769d6);}
+  #start .badge{width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;}
+  #start h1{font-size:23px;margin:0;font-weight:800;letter-spacing:-.01em;}
+  #start p{font-size:14px;opacity:.92;margin:0;max-width:340px;line-height:1.5;}
+  #startBtn{background:#fff;color:#16294d;border:0;border-radius:13px;padding:17px 30px;font-weight:800;font-size:18px;margin-top:6px;}
+  #startStatus{font-size:12px;opacity:.8;min-height:16px;}
+  /* camera */
+  #cam{position:fixed;inset:0;background:#000;display:none;flex-direction:column;}
+  #cam .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));}
+  #count{font-weight:800;font-size:18px;}
+  #cam .bar .right{display:flex;gap:8px;align-items:center;}
+  #torch{display:none;background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:9px;padding:12px 16px;font-weight:800;font-size:15px;}
+  #done{background:#fff;color:#000;border:0;border-radius:9px;padding:12px 26px;font-weight:800;font-size:16px;}
+  #reader{flex:1;min-height:0;}
+  #manual{margin:8px 14px 0;background:#1e293b;color:#fff;border:1px solid #475569;border-radius:11px;padding:13px;font-weight:800;font-size:15px;}
+  #msg{padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));min-height:54px;font-weight:600;font-size:14px;line-height:1.55;}
+  /* overlays */
+  .ov{position:fixed;inset:0;background:#0f172a;display:none;overflow:auto;color:#fff;}
+  .wrap{max-width:620px;margin:0 auto;padding:18px;padding-top:max(18px,env(safe-area-inset-top));}
+  .ov h2{font-size:20px;margin:0;}
+  .row{display:flex;justify-content:space-between;align-items:center;}
+  .linkbtn{background:transparent;color:#94a3b8;border:0;font-weight:700;font-size:15px;}
+  .item{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:#1e293b;border-radius:9px;margin-bottom:7px;}
+  label.fld{font-size:12px;color:#94a3b8;font-weight:700;display:block;}
+  label.fld input{width:100%;font-size:16px;padding:11px;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#fff;margin-top:4px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .send{flex:2;background:#177245;color:#fff;border:0;border-radius:11px;padding:15px;font-weight:800;font-size:16px;}
+  .more{flex:1;background:#1e293b;color:#fff;border:1px solid #334155;border-radius:11px;padding:15px;font-weight:800;font-size:15px;}
+  #suIcon{font-size:58px;color:#4ade80;line-height:1;text-align:center;}
+</style>
+</head>
+<body>
+  <div id="start">
+    <div class="badge">ET</div>
+    <h1>Load &amp; deliver — live scan</h1>
+    <p>Point the camera at each tag. It beeps and the count climbs. Set the truck and job at the end, then send.</p>
+    <button id="startBtn">Start scanning</button>
+    <div id="startStatus">Loading inventory…</div>
+  </div>
+
+  <div id="cam">
+    <div class="bar">
+      <span id="count">0 scanned</span>
+      <span class="right">
+        <button id="torch">Light</button>
+        <button id="done">Done</button>
+      </span>
+    </div>
+    <div id="reader"></div>
+    <button id="manual">No barcode? Enter serial number</button>
+    <div id="msg"></div>
+  </div>
+
+  <div class="ov" id="review">
+    <div class="wrap">
+      <div class="row"><h2 id="revTitle">Scanned</h2><button class="linkbtn" id="revCancel">Cancel</button></div>
+      <div id="revList" style="margin:12px 0;"></div>
+      <div class="grid2">
+        <label class="fld">Check out to (crew / person)<input id="fTo" autocomplete="off" /></label>
+        <label class="fld">Destination job / site<input id="fDest" autocomplete="off" /></label>
+        <label class="fld">Vehicle (optional)<input id="fVeh" autocomplete="off" /></label>
+        <label class="fld">Expected return (optional)<input id="fRet" type="date" /></label>
+        <label class="fld">Floor (optional)<input id="fFloor" autocomplete="off" /></label>
+        <label class="fld">Room / area (optional)<input id="fRoom" autocomplete="off" /></label>
+      </div>
+      <div id="revMsg" style="margin:12px 0;font-weight:700;min-height:20px;"></div>
+      <div style="display:flex;gap:10px;margin-top:8px;padding-bottom:24px;">
+        <button class="more" id="revMore">Scan more</button>
+        <button class="send" id="revSend">Send out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ov" id="success">
+    <div class="wrap" style="text-align:center;padding-top:12vh;">
+      <div id="suIcon">&#10003;</div>
+      <h2 style="font-size:25px;margin:14px 0 6px;">Saved</h2>
+      <p id="suMsg" style="font-size:17px;color:#cbd5e1;margin:0 0 4px;"></p>
+      <p style="font-size:13px;color:#94a3b8;margin:0 0 24px;">Updated in the tracker now.</p>
+      <button class="send" id="suMore" style="display:block;width:100%;margin-bottom:10px;">Scan another load</button>
+      <button class="more" id="suClose" style="display:block;width:100%;">Close</button>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var API="https://script.google.com/macros/s/AKfycbzqWqQaBG37o8o-LMXAgVNTjuGFWcqTtENnjmFX-EcaZb2RW7Qt-Gp0oiula3OWc4g--Q/exec";
+  var assets=[], byCode={}, scanned=[], qr=null, cooldown={}, lines=[];
+  function $(id){return document.getElementById(id);}
+  function n(s){return String(s==null?"":s).trim().toLowerCase();}
+  function show(el,disp){ el.style.display=disp||"block"; }
+  function hide(el){ el.style.display="none"; }
+
+  /* ---------- load inventory for name lookup (JSONP) ---------- */
+  function indexAssets(){
+    byCode={};
+    for(var i=0;i<assets.length;i++){ var a=assets[i];
+      [a.assetNumber,a.barcode,a.serialNumber].forEach(function(c){ var k=n(c); if(k) byCode[k]=a; });
+    }
+  }
+  function loadAssets(cb){
+    var name="__cb"+Math.random().toString(36).slice(2), done=false;
+    var s=document.createElement("script");
+    window[name]=function(d){ done=true; try{ assets=(d&&d.assets)||[]; indexAssets(); }catch(e){} cleanup(); cb&&cb(true); };
+    function cleanup(){ try{delete window[name];}catch(e){} if(s.parentNode)s.parentNode.removeChild(s); }
+    s.onerror=function(){ if(!done){ cleanup(); cb&&cb(false); } };
+    s.src=API+"?api=state&callback="+name+"&t="+Date.now();
+    document.body.appendChild(s);
+    setTimeout(function(){ if(!done){ cleanup(); cb&&cb(false); } },25000);
+  }
+  function lookup(code){ return byCode[n(code)]||null; }
+  function nameOf(a){ if(!a) return ""; return a.type||a.category||"Equipment"; }
+  function numOf(a){ return (a&&(a.assetNumber||a.barcode||a.serialNumber))||""; }
+
+  /* ---------- feedback ---------- */
+  function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(); var o=c.createOscillator(),g=c.createGain(); o.connect(g); g.connect(c.destination); o.type="square"; o.frequency.value=900; g.gain.value=0.05; o.start(); setTimeout(function(){o.stop(); if(c.close)c.close();},90);}catch(e){} }
+  function line(t,kind){ lines.unshift({t:t,k:kind}); if(lines.length>6)lines.pop(); var m=$("msg"); m.innerHTML=lines.map(function(l){var c=l.k==="ok"?"#4ade80":(l.k==="warn"?"#fbbf24":"#cbd5e1");return '<div style="color:'+c+';">'+l.t+'</div>';}).join(""); }
+  function setCount(){ $("count").textContent=scanned.length+" scanned"; }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  /* ---------- camera ---------- */
+  function boxFn(vw,vh){ var s=Math.round(Math.min(vw||300,vh||300)*0.8); return {width:s,height:s}; }
+  function onCode(txt){
+    var code=String(txt||"").trim(); if(!code) return;
+    var now=Date.now(); if(cooldown[code]&&now-cooldown[code]<1500) return; cooldown[code]=now;
+    var a=lookup(code);
+    if(a){
+      if(!scanned.some(function(x){return x._id===(a.id||numOf(a));})){ a._id=(a.id||numOf(a)); scanned.push(a); }
+      setCount(); beep(); try{if(navigator.vibrate)navigator.vibrate(60);}catch(e){}
+      line("✓ "+esc(nameOf(a))+" (#"+esc(numOf(a))+")","ok");
+    } else {
+      // not found in inventory yet — still record the raw code so nothing is lost
+      var raw={_id:"raw:"+n(code), assetNumber:code, type:"(unknown tag)", _raw:true};
+      if(!scanned.some(function(x){return x._id===raw._id;})){ scanned.push(raw); }
+      setCount(); beep();
+      line('Read "'+esc(code)+'" — not in inventory, kept anyway','warn');
+    }
+  }
+  function setupTorch(){
+    try{
+      var v=document.querySelector("#reader video"); if(!v||!v.srcObject) return;
+      var t=(v.srcObject.getVideoTracks()||[])[0]; if(!t||!t.getCapabilities) return;
+      var caps=t.getCapabilities(); if(!caps||!caps.torch) return;
+      var btn=$("torch"); var on=false; btn.style.display="inline-block";
+      btn.onclick=function(){ on=!on; try{t.applyConstraints({advanced:[{torch:on}]});}catch(e){} btn.textContent=on?"Light on":"Light"; };
+    }catch(e){}
+  }
+  function makeQr(useDetector){
+    var cfg={verbose:false};
+    if(useDetector){ cfg.experimentalFeatures={useBarCodeDetectorIfSupported:true}; try{ if(typeof Html5QrcodeSupportedFormats!=="undefined") cfg.formatsToSupport=[Html5QrcodeSupportedFormats.QR_CODE]; }catch(e){} }
+    return new Html5Qrcode("reader",cfg);
+  }
+  function camError(e){
+    var m=(e&&e.message)||(""+e);
+    if(/NotAllowed|Permission|denied/i.test(m)){ line("Camera access is blocked. Allow the camera for this page, then reopen — or tap “No barcode”.","warn"); }
+    else if(/NotFound|device not found/i.test(m)){ line("No camera was found — tap “No barcode” to type the number.","warn"); }
+    else if(/NotReadable|in use|Could not start video|TrackStart/i.test(m)){ line("The camera is busy in another app. Close it, then reopen — or tap “No barcode”.","warn"); }
+    else { line("Camera couldn’t start ("+esc(m)+"). Tap “No barcode” to type the number, or reopen.","warn"); }
+  }
+  function startAttempt(useDetector,isRetry){
+    try{ qr=makeQr(useDetector); }
+    catch(e){ if(!isRetry){ startAttempt(false,true); return; } line("Scanner could not start — reopen the page.","warn"); return; }
+    qr.start({facingMode:"environment"},{fps:15,qrbox:boxFn},onCode,function(){})
+      .then(function(){
+        try{ var v=document.querySelector("#reader video"); if(v&&v.srcObject){ var t=(v.srcObject.getVideoTracks()||[])[0]; if(t&&t.applyConstraints){ t.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(function(){}); } } }catch(e){}
+        try{ setupTorch(); }catch(e){}
+      })
+      .catch(function(e){
+        if(!isRetry){ try{ if(qr&&qr.stop) qr.stop().catch(function(){}); }catch(_){} try{ if(qr&&qr.clear) qr.clear(); }catch(_){} qr=null; setTimeout(function(){ startAttempt(false,true); },400); return; }
+        camError(e);
+      });
+  }
+  function openCamera(){
+    hide($("start")); hide($("review")); hide($("success"));
+    var c=$("cam"); c.style.display="flex";
+    lines=[]; cooldown={}; setCount();
+    line("Hold the QR tag in the box — it reads on its own.","");
+    if(typeof Html5Qrcode==="undefined"){ line("Scanner library could not load — check your connection and reopen.","warn"); return; }
+    startAttempt(true,false);
+  }
+  function stopCamera(cb){ if(qr){ try{ qr.stop().then(function(){try{qr.clear();}catch(e){} qr=null; cb&&cb();}).catch(function(){ qr=null; cb&&cb(); }); return; }catch(e){ qr=null; } } cb&&cb(); }
+
+  /* ---------- manual entry ---------- */
+  function openManual(){
+    var v=prompt("Enter serial / asset number:");
+    if(v==null) return;
+    v=String(v).trim(); if(!v){ return; }
+    onCode(v);
+  }
+
+  /* ---------- review ---------- */
+  function renderReview(){
+    $("revTitle").textContent=scanned.length+" piece"+(scanned.length===1?"":"s")+" scanned";
+    var L=$("revList");
+    L.innerHTML=scanned.length? scanned.map(function(a,i){
+      return '<div class="item"><span><b>'+esc(nameOf(a))+'</b> <span style="color:#94a3b8;">#'+esc(numOf(a))+'</span></span><button class="linkbtn" data-i="'+i+'">remove</button></div>';
+    }).join("") : '<div style="color:#94a3b8;">Nothing scanned.</div>';
+    Array.prototype.forEach.call(L.querySelectorAll("button[data-i]"),function(b){ b.onclick=function(){ scanned.splice(+b.getAttribute("data-i"),1); renderReview(); }; });
+    $("revSend").textContent=scanned.length? ("Send out "+scanned.length+" piece"+(scanned.length===1?"":"s")) : "Send out";
+  }
+  function showReview(){
+    stopCamera(function(){
+      hide($("cam"));
+      $("revMsg").textContent="";
+      renderReview();
+      show($("review"));
+      window.scrollTo(0,0);
+    });
+  }
+
+  /* ---------- send out (POST loadout) ---------- */
+  function sendOut(){
+    var msg=$("revMsg");
+    if(!scanned.length){ msg.innerHTML='<span style="color:#fbbf24;">Nothing to send.</span>'; return; }
+    var codes=scanned.map(function(a){ return numOf(a); });
+    var payload={ action:"loadout", codes:codes, vehicle:$("fVeh").value.trim(), destination:$("fDest").value.trim(), custodian:$("fTo").value.trim(), floor:$("fFloor").value.trim(), room:$("fRoom").value.trim(), expectedReturn:$("fRet").value.trim(), user:($("fTo").value.trim()||"scanner") };
+    var btn=$("revSend"); btn.disabled=true; msg.innerHTML='<span style="color:#cbd5e1;">Saving… (first save can take a few seconds while the system wakes up)</span>';
+    fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
+      .then(function(r){return r.text();}).then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d=null;} btn.disabled=false;
+        if(d&&d.ok&&d.applied>0){ showSuccess(d.applied, payload.destination, payload.vehicle); scanned=[]; }
+        else if(d&&d.ok&&d.applied===0){ msg.innerHTML='<span style="color:#fbbf24;">Reached the tracker, but 0 matched inventory. Codes: '+esc((d.notfound||codes).slice(0,8).join(", "))+'</span>'; }
+        else { msg.innerHTML='<span style="color:#f87171;">No confirmation — your scans are still here, tap Send out again.</span>'; }
+      }).catch(function(){ btn.disabled=false; msg.innerHTML='<span style="color:#f87171;">Could not reach the tracker — check the connection and tap Send out again. Your scans are still here.</span>'; });
+  }
+  function showSuccess(applied,dest,veh){
+    hide($("review"));
+    $("suMsg").textContent=applied+" piece"+(applied===1?"":"s")+" checked out"+(veh?(" on "+veh):"")+(dest?(" → "+dest):"")+".";
+    show($("success"),"block"); window.scrollTo(0,0);
+  }
+
+  /* ---------- wire up ---------- */
+  $("startBtn").onclick=openCamera;
+  $("done").onclick=showReview;
+  $("manual").onclick=openManual;
+  $("revCancel").onclick=function(){ scanned=[]; hide($("review")); show($("start"),"flex"); };
+  $("revMore").onclick=function(){ openCamera(); };
+  $("revSend").onclick=sendOut;
+  $("suMore").onclick=function(){ scanned=[]; openCamera(); };
+  $("suClose").onclick=function(){ scanned=[]; hide($("success")); show($("start"),"flex"); };
+
+  // load inventory in background; enable Start when ready (but allow starting anyway)
+  loadAssets(function(ok){
+    $("startStatus").textContent = ok ? (assets.length+" pieces loaded — ready") : "Couldn’t preload names — you can still scan; names fill in on send.";
+  });
+})();
+</script>
+</body>
+</html>
