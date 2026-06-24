@@ -1725,6 +1725,28 @@ input.picker-search{ padding-left:42px; font-size:16px; }
             <input id="specs-search" placeholder="Search by model, type, manufacturer..." style="flex:1;max-width:360px;" oninput="specsSearchQuery=this.value;renderSpecsTab();" />
           </div>
         </div>
+        <style>
+          #specs-content.specs-grid{display:block;}
+          .spec-type{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--card,#fff);overflow:hidden;}
+          .spec-type[open]{box-shadow:0 1px 4px rgba(0,0,0,.05);}
+          .spec-type>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;}
+          .spec-type>summary::-webkit-details-marker{display:none;}
+          .spec-type>summary::before{content:'\25B8';color:var(--muted);margin-right:10px;display:inline-block;transition:transform .15s;font-size:13px;}
+          .spec-type[open]>summary::before{transform:rotate(90deg);}
+          .spec-type-name{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:800;color:var(--ink);}
+          .spec-type-meta{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;}
+          .spec-type-body{padding:0 16px 10px;}
+          .spec-model{border-top:1px solid var(--line);}
+          .spec-model>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 4px;}
+          .spec-model>summary::-webkit-details-marker{display:none;}
+          .spec-model>summary::before{content:'\25B8';color:var(--muted2);margin-right:8px;display:inline-block;transition:transform .15s;font-size:11px;}
+          .spec-model[open]>summary::before{transform:rotate(90deg);}
+          .spec-model-name{font-size:14px;color:var(--ink2);}
+          .spec-model-meta{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;white-space:nowrap;}
+          .spec-row-badge{background:var(--slate);color:var(--blue2);border-radius:6px;padding:1px 8px;font-weight:700;font-size:11px;}
+          .spec-model-body{padding:4px 4px 16px 22px;}
+          @media (max-width:640px){ .spec-detail-grid{grid-template-columns:1fr !important;} }
+        </style>
         <div id="specs-content" class="specs-grid"></div>
       </section>
 
@@ -2715,8 +2737,24 @@ function renderSelects(){
   $('typeFilter').innerHTML='<option value="">All types</option>'+types.map(s=>`<option>${s}</option>`).join('');
   $('category').innerHTML=categories.map(c=>`<option>${c}</option>`).join('');
 }
-function renderLog(){$('activityLog').innerHTML=log.map(function(l){var canUndo=l.undo&&l.undo.items&&l.undo.items.length&&!l.undone;var ub=canUndo?` <button onclick="undoLogEntry('${l.id}')" style="margin-left:8px;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:var(--slate);color:var(--blue2);cursor:pointer;font-weight:700;">Undo</button>`:'';var tag=l.undone?' <span style="color:var(--muted2);font-size:11px;">(undone)</span>':'';return `<div class="log-item"><strong>${l.time}</strong> · ${escapeHtml(l.user||'Unknown user')}${ub}<br>${escapeHtml(l.txt)}${tag}</div>`;}).join('')||'<div class="log-item">No activity yet.</div>';}
-window.undoLogEntry=function(logId){var e=log.find(function(x){return x.id===logId;});if(!e||!e.undo||!e.undo.items||!e.undo.items.length)return;var field=e.undo.field||'location';var n=e.undo.items.length;if(!confirm('Undo this? '+n+' piece'+(n!==1?'s':'')+' will go back to where '+(n!==1?'they were':'it was')+' before.'))return;var reverted=0;e.undo.items.forEach(function(it){var a=assets.find(function(x){return x.id===it.id;});if(a){a[field]=it.old;if(!a.custodian)a.custodian='Inventory';reverted++;}});e.undone=true;addLog('Undid: '+e.txt+' — '+reverted+' put back.');save();try{showToast('✓ Undone — '+reverted+' put back');}catch(_){}render();};
+// Returns reversible-move data for a log entry: structured undo if present, else parsed from "...moved from X to Y." text.
+function undoDataFor(l){
+  if(!l||l.undone) return null;
+  if(l.undo&&l.undo.items&&l.undo.items.length) return l.undo;
+  var m=(l.txt||'').match(/ moved from (.+) to (.+)\.\s*$/);
+  if(m){
+    var from=m[1];
+    var idm=(l.txt||'').match(/^(.*?) \((.*?)\) moved from /);
+    var idinfo=idm?idm[2]:'';
+    if(idinfo){
+      var a=assets.find(function(x){var sn=String(x.serialNumber||''),bc=String(x.barcode||''),an=String(x.assetNumber||'');return (sn&&idinfo.indexOf(sn)>=0)||(bc&&idinfo.indexOf(bc)>=0)||(an&&idinfo.indexOf(an)>=0);});
+      if(a) return {field:'location',items:[{id:a.id,old:from}]};
+    }
+  }
+  return null;
+}
+function renderLog(){$('activityLog').innerHTML=log.map(function(l){var u=undoDataFor(l);var ub=u?` <button onclick="undoLogEntry('${l.id}')" style="margin-left:8px;font-size:11px;padding:2px 10px;border:1px solid var(--line);border-radius:6px;background:var(--slate);color:var(--blue2);cursor:pointer;font-weight:700;">↩ Undo</button>`:'';var tag=l.undone?' <span style="color:var(--muted2);font-size:11px;">(undone)</span>':'';return `<div class="log-item"><strong>${l.time}</strong> · ${escapeHtml(l.user||'Unknown user')}${ub}<br>${escapeHtml(l.txt)}${tag}</div>`;}).join('')||'<div class="log-item">No activity yet.</div>';}
+window.undoLogEntry=function(logId){var e=log.find(function(x){return x.id===logId;});if(!e)return;var u=undoDataFor(e);if(!u||!u.items||!u.items.length){alert('This entry can\'t be auto-undone (its previous location wasn\'t recorded).');return;}var field=u.field||'location';var n=u.items.length;if(!confirm('Undo this? '+n+' piece'+(n!==1?'s':'')+' will go back to where '+(n!==1?'they were':'it was')+' before.'))return;var reverted=0;u.items.forEach(function(it){var a=assets.find(function(x){return x.id===it.id;});if(a){a[field]=it.old;if(!a.custodian)a.custodian='Inventory';reverted++;}});e.undone=true;addLog('Undid: '+e.txt+' — '+reverted+' put back.');save();try{showToast('✓ Undone — '+reverted+' put back');}catch(_){}render();};
 function renderSignoffs(){const q=(($('signoffSearch')?.value||'')).toLowerCase();const rows=signoffs.filter(s=>Object.values(s).join(' ').toLowerCase().includes(q));$('signoffTable').innerHTML=`<table><thead><tr><th>Date</th><th>Asset</th><th>Cleaned by</th><th>QC by</th><th>Notes</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.time}</td><td><b style="color:var(--blue2);cursor:pointer;" onclick="openAssetByNumber('${s.assetNumber}')">${escapeHtml(s.assetNumber)}</b><br>${escapeHtml(s.model||'')}</td><td>${escapeHtml(s.cleanedBy)}</td><td>${escapeHtml(s.qcBy)}</td><td>${escapeHtml(s.notes||'')}</td></tr>`).join('')||'<tr><td colspan="5">No cleaning sign-offs yet.</td></tr>'}</tbody></table>`;}
 function render(){renderDashboard();renderCards();renderSelects();renderLocationBtns();renderLog();renderSignoffs();}
 // Debounced search — fires 120ms after user stops typing for smooth live results
@@ -4070,24 +4108,75 @@ window.renderSpecsTab = function() {
   const q = specsSearchQuery.toLowerCase().trim();
   const el = document.getElementById('specs-content');
   if (!el) return;
-
-  // Get unique models that have specs
+  // One row per unique model (manufacturer + type + first 3 words of model)
   const seen = new Set();
   const modelList = assets.filter(a => {
-    const specs = getSpecs(a.manufacturer, a.model);
-    const key = `${a.manufacturer}|${a.type}|${a.model?.split(' ').slice(0,3).join(' ')}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).sort((a, b) => (a.type || '').localeCompare(b.type || '') || (a.manufacturer || '').localeCompare(b.manufacturer || ''));
-
-  const filtered = q ? modelList.filter(a =>
-    [a.manufacturer, a.model, a.type].join(' ').toLowerCase().includes(q)
-  ) : modelList;
-
-  el.innerHTML = filtered.map(a => renderSpecCard(a)).join('') ||
-    '<div style="color:var(--muted);padding:20px;">No equipment matching that search.</div>';
+    const key = `${a.manufacturer}|${a.type}|${(a.model||'').split(' ').slice(0,3).join(' ')}`;
+    if (seen.has(key)) return false; seen.add(key); return true;
+  });
+  const filtered = q ? modelList.filter(a => [a.manufacturer, a.model, a.type].join(' ').toLowerCase().includes(q)) : modelList;
+  // Group the models by equipment type
+  const groups = {};
+  filtered.forEach(a => { const t = a.type || 'Other'; (groups[t] = groups[t] || []).push(a); });
+  const types = Object.keys(groups).sort();
+  if (!types.length) { el.innerHTML = '<div style="color:var(--muted);padding:20px;">No equipment matching that search.</div>'; return; }
+  el.innerHTML = types.map(t => {
+    const items = groups[t].sort((a,b)=>(a.manufacturer||'').localeCompare(b.manufacturer||'')||(a.model||'').localeCompare(b.model||''));
+    const unitCount = assets.filter(x => (x.type||'Other')===t).length;
+    const open = q ? ' open' : '';
+    const rows = items.map(a => renderSpecRow(a)).join('');
+    return `<details class="spec-type"${open}>
+      <summary class="spec-type-head"><span class="spec-type-name">${escapeHtml(t)}</span><span class="spec-type-meta">${items.length} model${items.length!==1?'s':''} &middot; ${unitCount} unit${unitCount!==1?'s':''}</span></summary>
+      <div class="spec-type-body">${rows}</div>
+    </details>`;
+  }).join('');
 };
+
+function renderSpecRow(a) {
+  const specs = getSpecs(a.manufacturer, a.model);
+  const count = assets.filter(x => x.manufacturer === a.manufacturer &&
+    (x.model || '').split(' ').slice(0,3).join(' ') === (a.model || '').split(' ').slice(0,3).join(' ')).length;
+  const mfr = a.manufacturer || '—';
+  const model = (a.model || '').split(' ').slice(0,4).join(' ') || '—';
+  let badge = '';
+  if (specs) {
+    if (specs.cfm) badge = `<span class="spec-row-badge">${specs.cfm} CFM</span>`;
+    else if (specs.ppd) badge = `<span class="spec-row-badge">${specs.ppd}</span>`;
+    else if (specs.weightLbs) badge = `<span class="spec-row-badge">${specs.weightLbs} lbs</span>`;
+  }
+  const body = specs ? specDetailBody(specs)
+    : `<div style="color:var(--muted2);font-size:12px;padding:10px 2px;">Specs not on file for this model. <a href="#" onclick="event.preventDefault();editAsset('${a.id}')" style="color:var(--blue2);">Add notes via Edit.</a></div>`;
+  return `<details class="spec-model">
+    <summary class="spec-model-head"><span class="spec-model-name"><b>${escapeHtml(mfr)}</b> ${escapeHtml(model)}</span><span class="spec-model-meta">${count} unit${count!==1?'s':''}${badge}</span></summary>
+    <div class="spec-model-body">${body}</div>
+  </details>`;
+}
+
+function specDetailBody(specs) {
+  const filterRows = (specs.filters||[]).map(f =>
+    `<tr><td>${f.stage}</td><td><b>${f.name}</b><br><span style="color:var(--muted);font-size:11px;">${f.type}</span></td><td style="color:${f.washable?'var(--emerald)':'var(--amber)'}">${f.washable?'✓ Washable':'Replace'}</td><td style="font-size:12px;">${f.partNote}</td></tr>`
+  ).join('');
+  const cfmEntry = specs.cfm ? `<div class="spec-kv"><span class="spec-k" style="color:var(--blue2);font-weight:800;">CFM</span><span class="spec-v" style="color:var(--blue2);font-weight:800;">${specs.cfm}</span></div>` : '';
+  const ppdEntry = specs.ppd ? `<div class="spec-kv"><span class="spec-k" style="color:var(--amber);font-weight:800;">PPD</span><span class="spec-v" style="color:var(--amber);font-weight:800;">${specs.ppd}</span></div>` : '';
+  const wtEntry = specs.weightLbs ? `<div class="spec-kv"><span class="spec-k">Weight</span><span class="spec-v">${specs.weightLbs} lbs</span></div>` : '';
+  const specRows = cfmEntry + ppdEntry + wtEntry + Object.entries(specs.specs||{}).map(([k,v]) =>
+    `<div class="spec-kv"><span class="spec-k">${k}</span><span class="spec-v">${v}</span></div>`
+  ).join('');
+  const serviceRows = (specs.serviceIntervals||[]).map(s =>
+    `<div class="service-row"><span class="service-interval">${s.interval}</span><span class="service-task">${s.task}</span></div>`
+  ).join('');
+  const manualLink = specs.manualUrl ? `<a href="${specs.manualUrl}" target="_blank" class="spec-manual-btn">↗ Manufacturer site</a>` : '';
+  const pricingHtml = specs.pricing ? `
+    <div style="margin-top:14px;padding:12px 14px;background:var(--navy);border-radius:12px;">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.5);margin-bottom:10px;">Billing rates — ${specs.pricing.category}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="text-align:center;background:rgba(255,255,255,.08);border-radius:8px;padding:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:2px;">Per Day</div><div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:800;color:white;">$${specs.pricing.day.toFixed(2)}</div></div>
+        <div style="text-align:center;background:rgba(255,255,255,.08);border-radius:8px;padding:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:2px;">Per Week</div><div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:800;color:white;">$${specs.pricing.week.toFixed(2)}</div></div>
+        <div style="text-align:center;background:rgba(255,255,255,.08);border-radius:8px;padding:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.5);margin-bottom:2px;">Per Month</div><div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:800;color:white;">$${specs.pricing.month.toFixed(2)}</div></div>
+      </div>
+    </div>` : '';
+  return `${(specs.filters&&specs.filters.length)?`<div class="spec-section-label">Filter specs</div><div class="table-wrap" style="margin-bottom:12px;"><table style="min-width:0;"><thead><tr><th>#</th><th>Filter</th><th>Type</th><th>Service note</th></tr></thead><tbody>${filterRows}</tbody></table></div>`:''}<div class="spec-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><div class="spec-section-label">Specifications</div><div class="spec-kv-block">${specRows}</div>${specs.notes?`<div style="margin-top:8px;font-size:12px;color:var(--muted);font-style:italic;">${specs.notes}</div>`:''}${manualLink}</div><div><div class="spec-section-label">Service intervals</div><div class="service-block">${serviceRows}</div></div></div>${pricingHtml}`;
+}
 
 function renderSpecCard(a) {
   const specs = getSpecs(a.manufacturer, a.model);
