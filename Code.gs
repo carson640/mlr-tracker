@@ -382,6 +382,9 @@ function normalizeAssets() {
         else { var lf = lastTok(mfr); if (/\d{5,}/.test(lf) && !isSpec(lf)) { serial = lf.replace(/[^A-Za-z0-9-]/g, ''); mfr = stripLast(mfr); } }
       }
 
+      // a serial-shaped code sitting in the MODEL with no serial on file → it's a serial, not a name (e.g. RestorAir "S2VU16DS00")
+      if (!serial && /^[A-Z0-9]{7,}$/.test(model) && /[A-Z]/.test(model) && /[0-9]/.test(model)) { serial = model; model = ''; }
+
       // a stray serial-like number sitting in capacity → move to an empty serial; clear money in capacity
       if (cap && !isSpec(cap)) { if (isMoney(cap)) cap = ''; else if (/^\d{5,}$/.test(cap)) { if (!serial) serial = cap; cap = ''; } }
 

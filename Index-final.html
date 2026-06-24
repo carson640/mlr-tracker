@@ -4095,6 +4095,10 @@ function getSpecs(manufacturer, model) {
   if (mfr === 'restorair') {
     return SPECS_DB['restorair|s2vu16ds00'] || null;
   }
+  // Goodway steamer: model code may be blank after cleanup → resolve by manufacturer
+  if (mfr === 'goodway') {
+    return SPECS_DB['goodway|gvc008659'] || null;
+  }
 
   // Try manufacturer-only match for known families
   const mfrOnly = Object.entries(SPECS_DB).find(([k]) => k.startsWith(mfr + '|'));
