@@ -402,7 +402,7 @@ function normalizeAssets() {
       if (an && (isSpec(an) || isMoney(an))) { if (!isSpec(cap)) cap = an; an = ''; }
       else if (an && /^(storage|warehouse|trailer|repair|shop|office|yard|unassigned|inventory|returned|dirty|available)$/i.test(an)) an = '';
       // rename the two box trucks wherever they appear (location / vehicle / destination)
-      var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck', 'smn7242': 'Vehicle SMN7242' };
+      var REN = { 'ford box truck': 'Ready Restoration Ford Box Truck', 'gmc box truck': 'Ready Restoration GMC Box Truck', 'smn7242': 'Vehicle SMN7242', "roy's crew": 'IAQ', 'roys crew': 'IAQ' };
       if (REN[loc.toLowerCase()]) loc = REN[loc.toLowerCase()];
       if (REN[veh.toLowerCase()]) veh = REN[veh.toLowerCase()];
       if (REN[dest.toLowerCase()]) dest = REN[dest.toLowerCase()];
