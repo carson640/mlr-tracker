@@ -222,16 +222,22 @@ function pushDelta(payload) {
     var newLogs = payload.newLogs || [];
     if (newLogs.length) {
       var lSh = sheet_('Log', LOG_COLS);
-      var lrows = newLogs.map(function (l) { return [l.id || '', l.time || '', l.user || '', l.txt || '']; });
-      lSh.getRange(lSh.getLastRow() + 1, 1, lrows.length, LOG_COLS.length).setValues(lrows);
+      var lSeen = {}, lLast = lSh.getLastRow();
+      if (lLast > 1) { var lIds = lSh.getRange(2, 1, lLast - 1, 1).getValues(); for (var li = 0; li < lIds.length; li++) lSeen[String(lIds[li][0])] = true; }
+      var lrows = newLogs.filter(function (l) { var k = String(l.id || ''); if (!k || lSeen[k]) return false; lSeen[k] = true; return true; })
+                         .map(function (l) { return [l.id || '', l.time || '', l.user || '', l.txt || '']; });
+      if (lrows.length) lSh.getRange(lSh.getLastRow() + 1, 1, lrows.length, LOG_COLS.length).setValues(lrows);
     }
 
     // ---- Signoffs: append new (as JSON) ----
     var newSign = payload.newSignoffs || [];
     if (newSign.length) {
       var sSh = sheet_('Signoffs', SIGNOFF_COLS);
-      var srows = newSign.map(function (s) { return [s.id || '', JSON.stringify(s)]; });
-      sSh.getRange(sSh.getLastRow() + 1, 1, srows.length, SIGNOFF_COLS.length).setValues(srows);
+      var sSeen = {}, sLast = sSh.getLastRow();
+      if (sLast > 1) { var sIds = sSh.getRange(2, 1, sLast - 1, 1).getValues(); for (var si = 0; si < sIds.length; si++) sSeen[String(sIds[si][0])] = true; }
+      var srows = newSign.filter(function (s) { var k = String(s.id || ''); if (!k || sSeen[k]) return false; sSeen[k] = true; return true; })
+                         .map(function (s) { return [s.id || '', JSON.stringify(s)]; });
+      if (srows.length) sSh.getRange(sSh.getLastRow() + 1, 1, srows.length, SIGNOFF_COLS.length).setValues(srows);
     }
 
     var v = bumpVersion_();

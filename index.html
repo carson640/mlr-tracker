@@ -2421,11 +2421,12 @@ window.openAssetDetail=function(id){
     ${row('Serial #', serialOf(a)||'Not recorded')}
     ${row('RFID tag', rfidOf(a))}
     ${row('Capacity / specs', capacityOf(a))}
+    ${row('Weight', (function(){var s=getSpecs(a.manufacturer,a.model);return s&&s.weightLbs?escapeHtml(s.weightLbs+' lbs (each)'):'';})())}
     ${row('Rate', costOf(a))}
     ${row('Last cleaned', a.lastCleanedAt)}
-    ${row('Cleaned by', a.cleanedBy)}
-    ${row('QC by', a.qcBy)}
-    ${a.notes?`<div style="margin-top:12px;padding:10px 12px;background:var(--slate);border-radius:10px;font-size:13px;color:var(--ink2);"><b>Notes:</b> ${a.notes}</div>`:''}
+    ${row('Cleaned by', escapeHtml(a.cleanedBy))}
+    ${row('QC by', escapeHtml(a.qcBy))}
+    ${a.notes?`<div style="margin-top:12px;padding:10px 12px;background:var(--slate);border-radius:10px;font-size:13px;color:var(--ink2);"><b>Notes:</b> ${escapeHtml(a.notes)}</div>`:''}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">
       <button class="secondary" onclick="closeAssetDetail();openAssetSpecs('${a.id}')">View specs</button>
       <button class="secondary" onclick="closeAssetDetail();editAsset('${a.id}')">Edit</button>
@@ -2684,7 +2685,7 @@ function renderCards(){
       <div class="meta"><b>Location</b><br><select class="card-loc-select" onclick="event.stopPropagation();" onchange="moveAssetTo('${a.id}',this.value)">${locOptions(a.location||'')}</select></div>
       ${floorRoomStr(a)?`<div class="meta"><b>On site</b><br>${escapeHtml(floorRoomStr(a))}</div>`:''}
       <div class="meta"><b>Assigned to</b><br>${a.custodian&&a.custodian!=='Inventory'?`<span class="assigned-link" data-assigned="${escapeHtml(a.custodian)}" onclick="event.stopPropagation();filterByAssigned(this.dataset.assigned)">${escapeHtml(a.custodian)}</span>`:'Inventory'}${a.cleanedBy?`<br>Cleaned by ${escapeHtml(a.cleanedBy)} · QC ${escapeHtml(a.qcBy)||'—'}`:''}</div>
-      ${a.notes?`<div class="meta"><b>Notes</b><br>${a.notes}</div>`:''}
+      ${a.notes?`<div class="meta"><b>Notes</b><br>${escapeHtml(a.notes)}</div>`:''}
       <div class="actions">
         <button onclick="editAsset('${a.id}')">Edit</button>
         <button class="secondary" onclick="quickCheckout('${a.id}')">Check out</button>
@@ -2748,8 +2749,8 @@ function renderSelects(){
   $('typeFilter').innerHTML='<option value="">All types</option>'+types.map(s=>`<option>${s}</option>`).join('');
   $('category').innerHTML=categories.map(c=>`<option>${c}</option>`).join('');
 }
-function renderLog(){$('activityLog').innerHTML=log.map(l=>`<div class="log-item"><strong>${l.time}</strong> · ${l.user||'Unknown user'}<br>${l.txt}</div>`).join('')||'<div class="log-item">No activity yet.</div>';}
-function renderSignoffs(){const q=(($('signoffSearch')?.value||'')).toLowerCase();const rows=signoffs.filter(s=>Object.values(s).join(' ').toLowerCase().includes(q));$('signoffTable').innerHTML=`<table><thead><tr><th>Date</th><th>Asset</th><th>Cleaned by</th><th>QC by</th><th>Notes</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.time}</td><td><b style="color:var(--blue2);cursor:pointer;" onclick="openAssetByNumber('${s.assetNumber}')">${s.assetNumber}</b><br>${s.model||''}</td><td>${s.cleanedBy}</td><td>${s.qcBy}</td><td>${s.notes||''}</td></tr>`).join('')||'<tr><td colspan="5">No cleaning sign-offs yet.</td></tr>'}</tbody></table>`;}
+function renderLog(){$('activityLog').innerHTML=log.map(l=>`<div class="log-item"><strong>${l.time}</strong> · ${l.user||'Unknown user'}<br>${escapeHtml(l.txt)}</div>`).join('')||'<div class="log-item">No activity yet.</div>';}
+function renderSignoffs(){const q=(($('signoffSearch')?.value||'')).toLowerCase();const rows=signoffs.filter(s=>Object.values(s).join(' ').toLowerCase().includes(q));$('signoffTable').innerHTML=`<table><thead><tr><th>Date</th><th>Asset</th><th>Cleaned by</th><th>QC by</th><th>Notes</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.time}</td><td><b style="color:var(--blue2);cursor:pointer;" onclick="openAssetByNumber('${s.assetNumber}')">${escapeHtml(s.assetNumber)}</b><br>${escapeHtml(s.model||'')}</td><td>${escapeHtml(s.cleanedBy)}</td><td>${escapeHtml(s.qcBy)}</td><td>${escapeHtml(s.notes||'')}</td></tr>`).join('')||'<tr><td colspan="5">No cleaning sign-offs yet.</td></tr>'}</tbody></table>`;}
 function render(){renderDashboard();renderCards();renderSelects();renderLocationBtns();renderLog();renderSignoffs();}
 // Debounced search — fires 120ms after user stops typing for smooth live results
 let _searchDebounce = null;
@@ -3023,7 +3024,7 @@ window.submitChecklist = function() {
   a.cleanedBy = c;
   a.qcBy = q;
   a.lastCleanedAt = time;
-  if (notes) a.notes = notes;
+  if (notes) a.notes = [a.notes, notes].filter(Boolean).join('; ');
 
   signoffs.unshift({
     id: uid(),
@@ -3113,7 +3114,7 @@ function buildLocPicker(btnContainerId, jobWrapId, jobInputId, hiddenId, display
     const hidden = getHidden();
     const display = getDisplay();
     if (hidden) hidden.value = val;
-    if (display) display.innerHTML = val ? `Location set to <b>${val}</b>` : 'No location selected';
+    if (display) display.innerHTML = val ? `Location set to <b>${escapeHtml(val)}</b>` : 'No location selected';
     btnWrap.querySelectorAll('.loc-pick-btn').forEach(b => {
       b.classList.toggle('loc-pick-active', b.dataset.loc === val || (b.dataset.loc === '__job__' && val && !FIXED_LOCATIONS.includes(val)));
     });
@@ -3169,7 +3170,7 @@ function buildLocPicker(btnContainerId, jobWrapId, jobInputId, hiddenId, display
       const hidden = getHidden();
       const display = getDisplay();
       if (hidden) hidden.value = v;
-      if (display) display.innerHTML = v ? `Location set to <b>${v}</b>` : 'No location selected';
+      if (display) display.innerHTML = v ? `Location set to <b>${escapeHtml(v)}</b>` : 'No location selected';
     };
   }
 }
@@ -3395,22 +3396,22 @@ function renderLookupRows(rows) {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">
         <div>
           <span style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:800;color:var(--blue2);letter-spacing:-.02em;cursor:pointer;" onclick="openAssetByNumber('${r.assetNumber}')">${r.assetNumber || '—'}</span>
-          <span style="font-size:12px;color:var(--muted);margin-left:8px;">${r.model || ''}</span>
-          ${r.location ? `<span style="font-size:12px;color:var(--muted);margin-left:4px;">· ${r.location}</span>` : ''}
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;">${escapeHtml(r.model || '')}</span>
+          ${r.location ? `<span style="font-size:12px;color:var(--muted);margin-left:4px;">· ${escapeHtml(r.location)}</span>` : ''}
         </div>
         <span style="font-size:11px;color:var(--muted2);white-space:nowrap;">${r.time}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div style="background:var(--emerald-soft);border-radius:8px;padding:8px 12px;">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--emerald);margin-bottom:2px;">Cleaned by</div>
-          <div style="font-size:13px;font-weight:700;color:var(--ink2);">${r.cleanedBy || '—'}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);">${escapeHtml(r.cleanedBy || '—')}</div>
         </div>
         <div style="background:var(--blue-soft);border-radius:8px;padding:8px 12px;">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue2);margin-bottom:2px;">QC by</div>
-          <div style="font-size:13px;font-weight:700;color:var(--ink2);">${r.qcBy || '—'}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink2);">${escapeHtml(r.qcBy || '—')}</div>
         </div>
       </div>
-      ${r.notes ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;"><b style="color:var(--ink2);">Notes:</b> ${r.notes}</div>` : ''}
+      ${r.notes ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;"><b style="color:var(--ink2);">Notes:</b> ${escapeHtml(r.notes)}</div>` : ''}
     </div>`).join('');
 }
 
