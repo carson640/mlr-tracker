@@ -4249,6 +4249,7 @@ const VEHICLE_SPECS = {
       body: 'Unicell Aerocell CW — 12ft cab-width fiberglass body (UCAC7912CW), Serial BCNF164060612',
       mfgDate: 'June 2012',
       wheelbase: '138"',
+      emptyWeight: '~8,400–8,800 lbs curb (GVWR 9,900 − payload; verify on scale)',
       gvwr: '9,900 lbs (confirmed — door jamb & Unicell sticker)',
       gawr: 'Front: 4,050 lbs / Rear: 6,084 lbs',
       payload: '~1,100–1,500 lbs net (GVWR 9,900 − curb weight)',
@@ -4269,6 +4270,7 @@ const VEHICLE_SPECS = {
       gmModel: 'G33803',
       body: 'Unicell Aerocell UCAG7915 — 15ft one-piece fiberglass, Serial BG2120040107',
       inspection: 'Annual inspection July 2025 — Ready Restoration, Buford GA',
+      emptyWeight: '~7,800–8,300 lbs curb (GVWR 12,300 − payload; verify on scale)',
       gvwr: '12,300 lbs (confirmed — GM & Unicell stickers)',
       gawr: 'Front: 4,600 lbs / Rear: 8,600 lbs (DRW dual)',
       payload: '~4,000–4,500 lbs net (GVWR 12,300 − est. curb weight)',
@@ -4303,10 +4305,10 @@ window.renderWeightTab = function() {
       <div style="margin-bottom:12px;padding:12px;background:var(--slate);border-radius:10px;border:1px solid var(--line);">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2);margin-bottom:8px;">Vehicle specs</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:${_vspec.tireSize?'10px':'0'};">
-          <div style="font-size:11px;color:var(--muted);">Type<br><b style="color:var(--ink2);font-size:12px;">${_vspec.type}</b></div>
-          <div style="font-size:11px;color:var(--muted);">Empty weight<br><b style="color:var(--ink2);font-size:12px;">${_vspec.emptyWeight}</b></div>
-          <div style="font-size:11px;color:var(--muted);">GVWR<br><b style="color:var(--ink2);font-size:12px;">${_vspec.gvwr}</b></div>
-          <div style="font-size:11px;color:var(--muted);">Est. payload<br><b style="color:var(--ink2);font-size:12px;">${_vspec.payload}</b></div>
+          <div style="font-size:11px;color:var(--muted);">Type<br><b style="color:var(--ink2);font-size:12px;">${_vspec.type||'—'}</b></div>
+          <div style="font-size:11px;color:var(--muted);">Empty weight<br><b style="color:var(--ink2);font-size:12px;">${_vspec.emptyWeight||'—'}</b></div>
+          <div style="font-size:11px;color:var(--muted);">GVWR<br><b style="color:var(--ink2);font-size:12px;">${_vspec.gvwr||'—'}</b></div>
+          <div style="font-size:11px;color:var(--muted);">Est. payload<br><b style="color:var(--ink2);font-size:12px;">${_vspec.payload||'—'}</b></div>
           ${_vspec.axles ? `<div style="font-size:11px;color:var(--muted);">Axles<br><b style="color:var(--ink2);font-size:12px;">${_vspec.axles}</b></div>` : ''}
           ${_vspec.gawr ? `<div style="font-size:11px;color:var(--muted);">GAWR<br><b style="color:var(--ink2);font-size:12px;">${_vspec.gawr}</b></div>` : ''}
           ${_vspec.mfgDate ? `<div style="font-size:11px;color:var(--muted);">Mfg date<br><b style="color:var(--ink2);font-size:12px;">${_vspec.mfgDate}</b></div>` : ''}
