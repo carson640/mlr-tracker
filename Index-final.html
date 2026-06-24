@@ -4195,17 +4195,25 @@ function renderSpecCard(a) {
 
 // ── TRUCK WEIGHT CALCULATOR ───────────────────────────────────────────────────
 // Vehicle payload limits — equipment cargo only (NOT including trailer/truck tare weight).
-// 48ft Kentucky enclosed semi trailers: GVWR 65,000 lbs (trailer only). The built-in steel side
-// racks run nearly the full length of both walls (stop ~5 ft short of the rear door), so real tare
-// is ~14,000–17,000 lbs — heavier than a bare trailer. Owner measured Trailer #1 at 40,000+ lbs
-// loaded incl. trailer. Cargo is also capped by the 80,000 lb federal combined GVW (tractor+trailer+load).
-// Conservative equipment cap per trailer ≈ 48,000 lbs (65,000 GVWR − ~16,000 tare w/ racks).
+// 48ft Kentucky enclosed semi trailers: GVWR 65,000 lbs (trailer only). The built-in steel side racks
+// run nearly the full length of both walls. Owner measured Trailer #1 at ~40,000 lbs loaded incl. trailer;
+// with ~15,700 lbs of counted gear that implies a tare of ~24,000 lbs (the racks are heavy). Cargo is also
+// capped by the 80,000 lb federal combined GVW. Conservative equipment cap per trailer ≈ 40,000 lbs.
 const VEHICLE_LIMITS = {
-    'Trailer #1': 48000,// GVWR 65,000 − ~16,000 tare (incl. steel side racks) ≈ 48,000 lbs equipment
-    'Trailer #2': 48000,
+    'Trailer #1': 40000,// GVWR 65,000 − ~24,000 tare (incl. steel side racks) ≈ 40,000 lbs equipment cap
+    'Trailer #2': 40000,
     'Ready Restoration Ford Box Truck': 1200,// GVWR 9,900 lbs confirmed; ~1,200 lbs net payload est.
     'Ready Restoration GMC Box Truck': 4000,// GVWR 12,300 lbs confirmed; ~4,000 lbs net payload est.
     'Ram Van': 3750,// Ram ProMaster 1500: GVWR 8,550 lbs, ~3,750 lbs payload
+  };
+// Vehicle empty/curb weight (lbs) — used for the "total = gear + vehicle" headline. Estimates; verify on a scale.
+// Trailer tare derived from the owner's ~40,000 lb loaded CAT-scale reading minus ~15,700 lbs of counted gear.
+const VEHICLE_TARE = {
+    'Trailer #1': 24000,
+    'Trailer #2': 24000,
+    'Ready Restoration Ford Box Truck': 8600,
+    'Ready Restoration GMC Box Truck': 8050,
+    'Ram Van': 4500,
   };
 const VEHICLE_SPECS = {
     'Trailer #1': {
@@ -4213,10 +4221,10 @@ const VEHICLE_SPECS = {
       mfgDate: 'February 1996',
       vin: '1KKVE4828TL105639',
       tag: 'GA YME436 (Gwinnett Co.) — Permanent Trailer tag',
-      emptyWeight: '~14,000–17,000 lbs incl. steel side racks (verify empty on scale)',
+      emptyWeight: '~22,000–25,000 lbs incl. steel side racks (from owner\'s ~40,000 lb loaded reading; weigh empty to confirm)',
       gvwr: '65,000 lbs',
       gawr: '20,000 lbs per axle',
-      payload: '~48,000 lbs equipment (conservative — GVWR − ~16,000 tare w/ racks; also held under 80,000 lb combined GVW)',
+      payload: '~40,000 lbs equipment (conservative — GVWR 65,000 − ~24,000 tare w/ racks)',
       axles: 'Tandem axles — 20,000 lbs each',
       tireSize: '255/70R 22.5 Radial',
       rimSize: '22.5 × 8.25',
@@ -4231,10 +4239,10 @@ const VEHICLE_SPECS = {
       serial: '105638',
       tag: 'GA YME435 (Gwinnett Co.) — Permanent Trailer tag',
       inspection: 'Annual inspection July 2025 — AI Storage Solutions, Norcross GA',
-      emptyWeight: '~14,000–17,000 lbs incl. steel side racks (verify at CAT scale)',
+      emptyWeight: '~22,000–25,000 lbs incl. steel side racks (identical to #1; weigh empty to confirm)',
       gvwr: '65,000 lbs (confirmed — VIN plate)',
       gawr: '20,000 lbs per axle (confirmed)',
-      payload: '~48,000 lbs equipment (conservative — GVWR − ~16,000 tare w/ racks; also held under 80,000 lb combined GVW)',
+      payload: '~40,000 lbs equipment (conservative — GVWR 65,000 − ~24,000 tare w/ racks)',
       axles: 'Tandem axles — 20,000 lbs each',
       tireSize: '255/70R 22.5 Radial',
       rimSize: '22.5 × 8.25',
@@ -4351,6 +4359,8 @@ window.renderWeightTab = function() {
     });
 
     const limit = VEHICLE_LIMITS[v] || null;
+    const tare = (typeof VEHICLE_TARE !== 'undefined' ? VEHICLE_TARE : null)?.[v] || 0;
+    const gross = totalWeight + tare;
     const pct = limit ? Math.min((totalWeight / limit) * 100, 100) : null;
     const overLimit = limit && totalWeight > limit;
     const barColor = overLimit ? 'var(--red)' : pct > 80 ? 'var(--amber)' : 'var(--emerald)';
@@ -4366,8 +4376,9 @@ window.renderWeightTab = function() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div class="weight-card-name">${v}</div>
         <div style="text-align:right;">
-          <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:${overLimit?'var(--red)':'var(--ink)'};letter-spacing:-.03em;line-height:1;">${totalWeight.toLocaleString()}</div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">lbs equipment</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:${overLimit?'var(--red)':'var(--ink)'};letter-spacing:-.03em;line-height:1;">${(tare?gross:totalWeight).toLocaleString()}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${tare?'lbs total':'lbs equipment'}</div>
+          ${tare?`<div style="font-size:10.5px;color:var(--muted2);margin-top:3px;white-space:nowrap;">${totalWeight.toLocaleString()} gear + ${tare.toLocaleString()} vehicle</div>`:''}
         </div>
       </div>
       ${vspecHtml}
