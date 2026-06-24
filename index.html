@@ -1878,6 +1878,10 @@ function normalizeLocation(l){
     'iaq box truck#2': 'IAQ Box Truck #2',
     'iaq ford box truck':'IAQ Box Truck #2',
     'sip9499':         'IAQ Box Truck #2',
+    'snu0651':         'IAQ Box Truck #3',
+    'iaq box truck #3':'IAQ Box Truck #3',
+    'iaq box truck 3': 'IAQ Box Truck #3',
+    'iaq box truck#3': 'IAQ Box Truck #3',
     'cubicals':        'Warehouse',  // cubicles → warehouse
     'xxxxxx':          'Unassigned',
   };
@@ -2238,7 +2242,7 @@ window.bulkCheckoutSubmit=function(){
 // ── LOAD & DELIVER (scan onto a vehicle, send to a job, drop on arrival) ──────
 let loadBatch = new Set();
 function knownVehicles(){
-  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck','IAQ Box Truck #1','IAQ Box Truck #2'];
+  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck','IAQ Box Truck #1','IAQ Box Truck #2','IAQ Box Truck #3'];
   var used=[]; assets.forEach(function(a){ if(a.vehicle && fixedVeh.indexOf(a.vehicle)<0 && used.indexOf(a.vehicle)<0) used.push(a.vehicle); });
   return fixedVeh.concat(used.sort());
 }
@@ -3150,6 +3154,7 @@ const FIXED_LOCATIONS = [
   'IAQ Box Truck #1',
   'IAQ',
   'IAQ Box Truck #2',
+  'IAQ Box Truck #3',
 ];
 
 function buildLocPicker(btnContainerId, jobWrapId, jobInputId, hiddenId, displayId, currentVal) {
@@ -4383,6 +4388,7 @@ const VEHICLE_LIMITS = {
     'Ram Van': 3750,// Ram ProMaster 1500: GVWR 8,550 lbs, ~3,750 lbs payload
     'IAQ Box Truck #1': 4300,// 2025 Ford E-450 + 16ft Wabash: GVWR ~14,500 − ~10,200 curb est. ≈ 4,300 lbs payload (verify on scale)
     'IAQ Box Truck #2': 4500,// 2024 Ford E-450: GVWR ~14,500 − ~10,000 curb est. ≈ 4,500 lbs payload (verify on scale)
+    'IAQ Box Truck #3': 4300,// 2025 Ford E-450 + Complete body: GVWR ~14,500 − ~10,200 curb est. ≈ 4,300 lbs payload (verify on scale)
   };
 // Vehicle empty/curb weight (lbs) — used for the "total = gear + vehicle" headline. Estimates; verify on a scale.
 // Trailer tare derived from the owner's ~40,000 lb loaded CAT-scale reading minus ~15,700 lbs of counted gear.
@@ -4394,6 +4400,7 @@ const VEHICLE_TARE = {
     'Ram Van': 4500,
     'IAQ Box Truck #1': 10200,
     'IAQ Box Truck #2': 10000,
+    'IAQ Box Truck #3': 10200,
   };
 const VEHICLE_SPECS = {
     'Trailer #1': {
@@ -4501,6 +4508,21 @@ const VEHICLE_SPECS = {
       axles: 'Dual rear axle (DRW dually)',
       note: 'IAQ Restoration (sister company) box truck. Chassis VIN decoded via NHTSA: 2024 Ford E-450, 7.3L V8 gas, RWD, GVWR Class 4. Box body: 2024 Morgan dry-freight (Model PSD08514096, Serial 26298722) — the model number likely encodes a ~14 ft × 96 in body; confirm length on site. For exact weights, send the door-jamb GVWR/GAWR + tire specs and a CAT-scale ticket.'
     },
+    'IAQ Box Truck #3': {
+      type: '2025 Ford E-450 Super Duty Cutaway — Complete Truck Bodies box body (DRW dually)',
+      owner: 'IAQ Restoration (sister company)',
+      vin: '1FDXE4FN3SDD00021',
+      tag: 'GA SNU0651 (Gwinnett Co.)',
+      engine: '7.3L V8 Gas (Godzilla)',
+      drive: 'RWD (rear-wheel drive)',
+      mfgDate: 'Chassis 2025 (Ford, Ohio)',
+      body: 'Complete Truck Bodies, Inc. (Gay, GA) — Serial DF1685960925-19',
+      emptyWeight: '~9,800–10,800 lbs curb est. (E-450 + box body; verify on scale)',
+      gvwr: '14,500 lbs (E-450 — NHTSA Class 4: 14,001–16,000 lbs)',
+      payload: '~3,700–4,700 lbs net est. (GVWR − curb weight)',
+      axles: 'Dual rear axle (DRW dually)',
+      note: 'IAQ Restoration (sister company) box truck. Chassis VIN decoded via NHTSA: 2025 Ford E-450, 7.3L V8 gas, RWD, GVWR Class 4. Box body by Complete Truck Bodies, Inc. (Gay, GA), Serial DF1685960925-19. Box length not yet confirmed — verify on site. For exact weights, send the door-jamb GVWR/GAWR + tire specs and a CAT-scale ticket.'
+    },
   };
 
 window.renderWeightTab = function() {
@@ -4510,7 +4532,7 @@ window.renderWeightTab = function() {
   // VEHICLE_LIMITS and VEHICLE_SPECS defined globally above
 
 
-  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van', 'IAQ Box Truck #1', 'IAQ Box Truck #2'];
+  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van', 'IAQ Box Truck #1', 'IAQ Box Truck #2', 'IAQ Box Truck #3'];
   const vehicleAssets = {};
   vehicles.forEach(v => {
     vehicleAssets[v] = assets.filter(a => (a.location || '').toLowerCase() === v.toLowerCase());
