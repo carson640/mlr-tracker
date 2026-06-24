@@ -2766,6 +2766,18 @@ window.filterByLocation=function(loc){
   renderLocationBtns();
 };
 
+// Open a vehicle/location's equipment list from anywhere (e.g. the Vehicle & load cards).
+window.openVehicle=function(loc){
+  locationFilter=loc||'';
+  assignedFilter='';
+  activeTypeFilter=null;
+  activeStatusFilter=null;
+  var s=$('search'); if(s) s.value='';
+  setTab('inventory');
+  renderCards();
+  renderLocationBtns();
+};
+
 window.clearLocationFilter=function(){
   locationFilter='';
   assignedFilter='';
@@ -4567,11 +4579,21 @@ window.renderWeightTab = function() {
         ${_vspec.note ? `<div style="margin-top:8px;font-size:10px;color:var(--muted2);font-style:italic;padding-top:6px;border-top:1px solid var(--line);">⚠ ${_vspec.note}</div>` : ''}
       </div>` : '';
 
-    if (!vas.length) return `<div class="weight-card weight-card-empty">
-      <div class="weight-card-name">${v}</div>
+    if (!vas.length) {
+      const tare0 = (typeof VEHICLE_TARE !== 'undefined' ? VEHICLE_TARE : null)?.[v] || 0;
+      return `<div class="weight-card weight-card-empty">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="weight-card-name" data-loc="${escapeHtml(v)}" onclick="openVehicle(this.dataset.loc)" title="See equipment on ${escapeHtml(v)}" style="cursor:pointer;color:var(--blue2);text-decoration:underline;text-underline-offset:3px;">${escapeHtml(v)}</div>
+        <div style="text-align:right;">
+          <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-.03em;line-height:1;">${(tare0||0).toLocaleString()}</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${tare0?'lbs total':'lbs'}</div>
+          ${tare0?`<div style="font-size:10.5px;color:var(--muted2);margin-top:3px;white-space:nowrap;">0 gear + ${tare0.toLocaleString()} vehicle</div>`:''}
+        </div>
+      </div>
       ${vspecHtml}
-      <div style="color:var(--muted2);font-size:13px;">No equipment assigned</div>
+      <div style="color:var(--muted2);font-size:13px;">No equipment assigned yet</div>
     </div>`;
+    }
 
     let totalWeight = 0;
     let unknownCount = 0;
@@ -4605,7 +4627,7 @@ window.renderWeightTab = function() {
 
     return `<div class="weight-card${overLimit?' weight-card-over':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div class="weight-card-name">${v}</div>
+        <div class="weight-card-name" data-loc="${escapeHtml(v)}" onclick="openVehicle(this.dataset.loc)" title="See equipment on ${escapeHtml(v)}" style="cursor:pointer;color:var(--blue2);text-decoration:underline;text-underline-offset:3px;">${escapeHtml(v)}</div>
         <div style="text-align:right;">
           <div style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:${overLimit?'var(--red)':'var(--ink)'};letter-spacing:-.03em;line-height:1;">${(tare?gross:totalWeight).toLocaleString()}</div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);">${tare?'lbs total':'lbs equipment'}</div>
