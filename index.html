@@ -1866,8 +1866,11 @@ function normalizeLocation(l){
     'trailer 2':       'Trailer #2',
     'trailer#2':       'Trailer #2',
     'unassigned':      'Unassigned',
-    'smn7242':         'Vehicle SMN7242',
-    'vehicle smn7242': 'Vehicle SMN7242',
+    'smn7242':         'IAQ Box Truck #1',
+    'vehicle smn7242': 'IAQ Box Truck #1',
+    'iaq box truck #1':'IAQ Box Truck #1',
+    'iaq box truck 1': 'IAQ Box Truck #1',
+    'iaq box truck#1': 'IAQ Box Truck #1',
     "roy's crew":      'IAQ',
     "roys crew":       'IAQ',
     'iaq box truck #2':'IAQ Box Truck #2',
@@ -2235,7 +2238,7 @@ window.bulkCheckoutSubmit=function(){
 // ── LOAD & DELIVER (scan onto a vehicle, send to a job, drop on arrival) ──────
 let loadBatch = new Set();
 function knownVehicles(){
-  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck','Vehicle SMN7242','IAQ Box Truck #2'];
+  var fixedVeh=['Trailer #1','Trailer #2','Ram Van','Ready Restoration Ford Box Truck','Ready Restoration GMC Box Truck','IAQ Box Truck #1','IAQ Box Truck #2'];
   var used=[]; assets.forEach(function(a){ if(a.vehicle && fixedVeh.indexOf(a.vehicle)<0 && used.indexOf(a.vehicle)<0) used.push(a.vehicle); });
   return fixedVeh.concat(used.sort());
 }
@@ -3144,7 +3147,7 @@ const FIXED_LOCATIONS = [
   'Ready Restoration GMC Box Truck',
   'Office Space',
   'Repair Room',
-  'Vehicle SMN7242',
+  'IAQ Box Truck #1',
   'IAQ',
   'IAQ Box Truck #2',
 ];
@@ -4378,6 +4381,7 @@ const VEHICLE_LIMITS = {
     'Ready Restoration Ford Box Truck': 1200,// GVWR 9,900 lbs confirmed; ~1,200 lbs net payload est.
     'Ready Restoration GMC Box Truck': 4000,// GVWR 12,300 lbs confirmed; ~4,000 lbs net payload est.
     'Ram Van': 3750,// Ram ProMaster 1500: GVWR 8,550 lbs, ~3,750 lbs payload
+    'IAQ Box Truck #1': 4300,// 2025 Ford E-450 + 16ft Wabash: GVWR ~14,500 − ~10,200 curb est. ≈ 4,300 lbs payload (verify on scale)
     'IAQ Box Truck #2': 4500,// 2024 Ford E-450: GVWR ~14,500 − ~10,000 curb est. ≈ 4,500 lbs payload (verify on scale)
   };
 // Vehicle empty/curb weight (lbs) — used for the "total = gear + vehicle" headline. Estimates; verify on a scale.
@@ -4388,6 +4392,7 @@ const VEHICLE_TARE = {
     'Ready Restoration Ford Box Truck': 8600,
     'Ready Restoration GMC Box Truck': 8050,
     'Ram Van': 4500,
+    'IAQ Box Truck #1': 10200,
     'IAQ Box Truck #2': 10000,
   };
 const VEHICLE_SPECS = {
@@ -4466,7 +4471,21 @@ const VEHICLE_SPECS = {
       note: 'All specs confirmed from GM chassis and Unicell body stickers. Tire is LT225/75R16D — note Load Range D not E. Rear runs dual configuration at same PSI as front (65 PSI cold).'
     },
     'Ram Van': { type: 'Ram ProMaster/1500 Van', emptyWeight: '~4,500 lbs', gvwr: '~6,500–8,550 lbs', payload: '~2,000–2,500 lbs', axles: 'Single rear axle', note: 'Check door jamb sticker for exact GVWR.' },
-    'Vehicle SMN7242': { type: '5th vehicle — make/model TBD (plate SMN7242)', emptyWeight: 'TBD', gvwr: 'TBD — send door-jamb sticker', payload: 'TBD', axles: 'TBD', note: 'New 5th vehicle added from inventory (plate SMN7242), currently holding 30 pieces. Send me the make/model + GVWR from the door-jamb sticker and I will finish its specs and set a payload limit.' },
+    'IAQ Box Truck #1': {
+      type: '2025 Ford E-450 Super Duty Cutaway — Wabash dry-freight box body (DRW dually)',
+      owner: 'IAQ Restoration (sister company)',
+      vin: '1FDXE4FN5SDD39144',
+      tag: 'GA SMN7242 (Gwinnett Co.)',
+      engine: '7.3L V8 Gas (Godzilla)',
+      drive: 'RWD (rear-wheel drive)',
+      mfgDate: 'Chassis 2025 (Ford, Ohio) · Body by Wabash',
+      body: 'Wabash (onewabash.com) — Model SSB16085096, Serial R0560322. Model no. likely encodes a ~16 ft L × 96 in W body — confirm length on site.',
+      emptyWeight: '~9,800–10,800 lbs curb est. (E-450 + ~16 ft Wabash body; verify on scale)',
+      gvwr: '14,500 lbs (E-450 — NHTSA Class 4: 14,001–16,000 lbs)',
+      payload: '~3,700–4,700 lbs net est. (GVWR − curb weight)',
+      axles: 'Dual rear axle (DRW dually)',
+      note: 'IAQ Restoration (sister company) box truck — newly identified; previously listed under its plate (SMN7242), so its assigned pieces carry over. Chassis VIN decoded via NHTSA: 2025 Ford E-450, 7.3L V8 gas, RWD, GVWR Class 4. Box body: Wabash dry-freight (Model SSB16085096, Serial R0560322). For exact weights, send the door-jamb GVWR/GAWR + tire specs and a CAT-scale ticket.'
+    },
     'IAQ Box Truck #2': {
       type: '2024 Ford E-450 Super Duty Cutaway — Morgan dry-freight box body (DRW dually)',
       owner: 'IAQ Restoration (sister company)',
@@ -4491,7 +4510,7 @@ window.renderWeightTab = function() {
   // VEHICLE_LIMITS and VEHICLE_SPECS defined globally above
 
 
-  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van', 'Vehicle SMN7242', 'IAQ Box Truck #2'];
+  const vehicles = ['Trailer #1', 'Trailer #2', 'Ready Restoration Ford Box Truck', 'Ready Restoration GMC Box Truck', 'Ram Van', 'IAQ Box Truck #1', 'IAQ Box Truck #2'];
   const vehicleAssets = {};
   vehicles.forEach(v => {
     vehicleAssets[v] = assets.filter(a => (a.location || '').toLowerCase() === v.toLowerCase());
