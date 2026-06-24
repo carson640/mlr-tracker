@@ -16,7 +16,7 @@
 var ASSET_COLS = ['id','assetNumber','barcode','category','type','manufacturer','model',
   'serialNumber','capacity','rentalCost','location','custodian','expectedReturn','status',
   'notes','cleanedBy','qcBy','lastCleanedAt','source','updatedAt','updatedBy','floor','room','vehicle','destination','jobNumber','jobName'];
-var LOG_COLS = ['id','time','user','txt'];
+var LOG_COLS = ['id','time','user','txt','undo'];
 var SIGNOFF_COLS = ['id','json'];
 
 function doGet(e) {
@@ -225,7 +225,7 @@ function pushDelta(payload) {
       var lSeen = {}, lLast = lSh.getLastRow();
       if (lLast > 1) { var lIds = lSh.getRange(2, 1, lLast - 1, 1).getValues(); for (var li = 0; li < lIds.length; li++) lSeen[String(lIds[li][0])] = true; }
       var lrows = newLogs.filter(function (l) { var k = String(l.id || ''); if (!k || lSeen[k]) return false; lSeen[k] = true; return true; })
-                         .map(function (l) { return [l.id || '', l.time || '', l.user || '', l.txt || '']; });
+                         .map(function (l) { return [l.id || '', l.time || '', l.user || '', l.txt || '', (l.undo != null ? (typeof l.undo === 'string' ? l.undo : JSON.stringify(l.undo)) : '')]; });
       if (lrows.length) lSh.getRange(lSh.getLastRow() + 1, 1, lrows.length, LOG_COLS.length).setValues(lrows);
     }
 

@@ -1852,7 +1852,7 @@ const ONLINE = (typeof google!=='undefined' && google.script && google.script.ru
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 $('currentUser').value=localStorage.getItem(USER_KEY)||'';
 function currentUser(){return $('currentUser').value.trim()||'Unknown user'}
-function addLog(txt){log.unshift({id:uid(),time:new Date().toLocaleString(),user:currentUser(),txt});if(log.length>500)log.pop();}
+function addLog(txt,undo){log.unshift({id:uid(),time:new Date().toLocaleString(),user:currentUser(),txt,undo:undo||null});if(log.length>500)log.pop();}
 
 // ── SYNC LAYER (shared mode) ──────────────────────────────────────────────────
 let _lastSynced={}, _syncedLogIds=new Set(), _syncedSignoffIds=new Set();
@@ -1866,8 +1866,8 @@ function setSyncStatus(s){
 function rebuildMarkers(){_lastSynced={};assets.forEach(a=>{_lastSynced[a.id]=JSON.stringify(a);});_syncedLogIds=new Set(log.map(l=>l.id).filter(Boolean));_syncedSignoffIds=new Set(signoffs.map(s=>s.id).filter(Boolean));}
 function cacheLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(assets));localStorage.setItem(LOG_KEY,JSON.stringify(log));localStorage.setItem(SIGNOFF_KEY,JSON.stringify(signoffs));}catch(e){}}
 function gsRun(fn){const args=[].slice.call(arguments,1);return new Promise((res,rej)=>{google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn].apply(null,args);});}
-function applyServerState(st){assets=(st.assets||[]).map(a=>({...a,location:normalizeLocation(a.location||'')}));log=st.log||[];signoffs=st.signoffs||[];_version=st.version||0;rebuildMarkers();cacheLocal();}
-function computeDelta(){const changed=[],curIds={};assets.forEach(a=>{curIds[a.id]=1;const j=JSON.stringify(a);if(_lastSynced[a.id]!==j)changed.push(a);});const deletedIds=Object.keys(_lastSynced).filter(id=>!curIds[id]);const newLogs=log.filter(l=>l.id&&!_syncedLogIds.has(l.id));const newSignoffs=signoffs.filter(s=>s.id&&!_syncedSignoffIds.has(s.id));return {changed,deletedIds,newLogs,newSignoffs,user:currentUser()};}
+function applyServerState(st){assets=(st.assets||[]).map(a=>({...a,location:normalizeLocation(a.location||'')}));log=(st.log||[]).map(function(e){if(e&&typeof e.undo==='string'&&e.undo){try{e.undo=JSON.parse(e.undo);}catch(_){e.undo=null;}}return e;}).reverse();signoffs=st.signoffs||[];_version=st.version||0;rebuildMarkers();cacheLocal();}
+function computeDelta(){const changed=[],curIds={};assets.forEach(a=>{curIds[a.id]=1;const j=JSON.stringify(a);if(_lastSynced[a.id]!==j)changed.push(a);});const deletedIds=Object.keys(_lastSynced).filter(id=>!curIds[id]);const newLogs=log.filter(l=>l.id&&!_syncedLogIds.has(l.id)).reverse();const newSignoffs=signoffs.filter(s=>s.id&&!_syncedSignoffIds.has(s.id));return {changed,deletedIds,newLogs,newSignoffs,user:currentUser()};}
 async function pushNow(){
   if(_pushing){_pushQueued=true;return;}
   const d=computeDelta();
@@ -2095,7 +2095,7 @@ window.moveAssetTo=function(id,loc){
   if(!loc || loc===(a.location||'')){ return; }
   const from=a.location||'Unassigned';
   a.location=loc;
-  addLog(`${classOf(a)} (${idShort(a)}) moved from ${from} to ${loc}.`);
+  addLog(`${classOf(a)} (${idShort(a)}) moved from ${from} to ${loc}.`, {field:'location', items:[{id:a.id, old:from}]});
   save();
   try{ showToast('✓ Moved to '+loc); }catch(e){}
 };
@@ -2579,8 +2579,9 @@ window.bulkMove=function(){
   const loc=($('bulkMoveLoc')?.value||'').trim();
   if(selectedIds.size===0){ alert('Tap "Select this" on the pieces you want to move first.'); return; }
   if(!loc){ alert('Choose the location to move them to.'); return; }
-  const ids=[...selectedIds]; let moved=0;
-  ids.forEach(id=>{ const a=assets.find(x=>x.id===id); if(!a) return; a.location=normalizeLocation(loc); if(!a.custodian) a.custodian='Inventory'; addLog((a.assetNumber||'Equipment')+' moved to '+loc+'.'); moved++; });
+  const ids=[...selectedIds]; let moved=0; const undoItems=[];
+  ids.forEach(id=>{ const a=assets.find(x=>x.id===id); if(!a) return; undoItems.push({id:a.id, old:a.location||'Unassigned'}); a.location=normalizeLocation(loc); if(!a.custodian) a.custodian='Inventory'; moved++; });
+  if(moved) addLog('Moved '+moved+' piece'+(moved!==1?'s':'')+' to '+loc+'.', {field:'location', items:undoItems});
   selectedIds.clear();
   save();
   updateBulkBar();
@@ -2714,7 +2715,8 @@ function renderSelects(){
   $('typeFilter').innerHTML='<option value="">All types</option>'+types.map(s=>`<option>${s}</option>`).join('');
   $('category').innerHTML=categories.map(c=>`<option>${c}</option>`).join('');
 }
-function renderLog(){$('activityLog').innerHTML=log.map(l=>`<div class="log-item"><strong>${l.time}</strong> · ${l.user||'Unknown user'}<br>${escapeHtml(l.txt)}</div>`).join('')||'<div class="log-item">No activity yet.</div>';}
+function renderLog(){$('activityLog').innerHTML=log.map(function(l){var canUndo=l.undo&&l.undo.items&&l.undo.items.length&&!l.undone;var ub=canUndo?` <button onclick="undoLogEntry('${l.id}')" style="margin-left:8px;font-size:11px;padding:2px 9px;border:1px solid var(--line);border-radius:6px;background:var(--slate);color:var(--blue2);cursor:pointer;font-weight:700;">Undo</button>`:'';var tag=l.undone?' <span style="color:var(--muted2);font-size:11px;">(undone)</span>':'';return `<div class="log-item"><strong>${l.time}</strong> · ${escapeHtml(l.user||'Unknown user')}${ub}<br>${escapeHtml(l.txt)}${tag}</div>`;}).join('')||'<div class="log-item">No activity yet.</div>';}
+window.undoLogEntry=function(logId){var e=log.find(function(x){return x.id===logId;});if(!e||!e.undo||!e.undo.items||!e.undo.items.length)return;var field=e.undo.field||'location';var n=e.undo.items.length;if(!confirm('Undo this? '+n+' piece'+(n!==1?'s':'')+' will go back to where '+(n!==1?'they were':'it was')+' before.'))return;var reverted=0;e.undo.items.forEach(function(it){var a=assets.find(function(x){return x.id===it.id;});if(a){a[field]=it.old;if(!a.custodian)a.custodian='Inventory';reverted++;}});e.undone=true;addLog('Undid: '+e.txt+' — '+reverted+' put back.');save();try{showToast('✓ Undone — '+reverted+' put back');}catch(_){}render();};
 function renderSignoffs(){const q=(($('signoffSearch')?.value||'')).toLowerCase();const rows=signoffs.filter(s=>Object.values(s).join(' ').toLowerCase().includes(q));$('signoffTable').innerHTML=`<table><thead><tr><th>Date</th><th>Asset</th><th>Cleaned by</th><th>QC by</th><th>Notes</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.time}</td><td><b style="color:var(--blue2);cursor:pointer;" onclick="openAssetByNumber('${s.assetNumber}')">${escapeHtml(s.assetNumber)}</b><br>${escapeHtml(s.model||'')}</td><td>${escapeHtml(s.cleanedBy)}</td><td>${escapeHtml(s.qcBy)}</td><td>${escapeHtml(s.notes||'')}</td></tr>`).join('')||'<tr><td colspan="5">No cleaning sign-offs yet.</td></tr>'}</tbody></table>`;}
 function render(){renderDashboard();renderCards();renderSelects();renderLocationBtns();renderLog();renderSignoffs();}
 // Debounced search — fires 120ms after user stops typing for smooth live results
