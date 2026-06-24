@@ -3968,6 +3968,40 @@ const SPECS_DB = {
     notes: 'Dri-Eaz XL 100 — conventional refrigerant dehumidifier. Uses 3M HAF filter. Rotomolded polyethylene housing. 92 lbs.',
   },
 
+  // Advanced Containment Systems Force Air 2000 EC (recovered from the "FA2000EC" code)
+  'fa2000ec|force air 2000 ec': {
+    cfm: '2,000', ppd: null, weightLbs: null,
+    filters: [
+      { stage: 1, name: 'Pre-filter', type: 'Particulate pre-filter', partNote: 'Replace when loaded; protects the HEPA.', washable: false },
+      { stage: 2, name: 'True HEPA', type: 'HEPA 99.97% @ 0.3 micron', partNote: 'Replace per filter-change indicator / hours of use.', washable: false },
+    ],
+    specs: { Manufacturer: 'Advanced Containment Systems (ACS)', Model: 'Force Air 2000 EC (FA2000EC)', Motor: '1.75 HP custom, balanced blower', Airflow: '2,000 CFM', Filtration: 'True HEPA 99.97% @ 0.3 micron', Cabinet: 'Heavy-duty aluminum, 4 swivel casters', Use: 'Negative air machine / air scrubber' },
+    serviceIntervals: [
+      { interval: 'Each job', task: 'Inspect / replace pre-filter; check HEPA loading' },
+      { interval: 'Per indicator', task: 'Replace HEPA when the change indicator / pressure says so' },
+    ],
+    pricing: null,
+    manualUrl: 'https://acsi-us.com/product/fa-2000-ec/',
+    notes: 'Recovered from the "FA2000EC" code. Confirm the exact HEPA part number with ACS before ordering.',
+  },
+
+  // DiamaPro Systems AS-2000 air scrubber (recovered from the "AS2000" code)
+  'as2000|as-2000': {
+    cfm: '2,000', ppd: null, weightLbs: null,
+    filters: [
+      { stage: 1, name: 'Pre-filter / nuisance-dust filter', type: '24×24×11.5 pleated', partNote: 'Standard 24×24×11.5 size.', washable: false },
+      { stage: 2, name: 'True HEPA', type: '24×24×11.5 HEPA', partNote: 'Standard 24×24×11.5 HEPA.', washable: false },
+    ],
+    specs: { Manufacturer: 'DiamaPro Systems', Model: 'AS-2000', Motor: '2 HP, 2-speed', Airflow: '2,000 CFM (filters in place)', Filtration: 'Standard 24×24×11.5 HEPA or nuisance-dust filter', Shell: 'Seamless polyethylene; nesting casters for stacking' },
+    serviceIntervals: [
+      { interval: 'Each job', task: 'Inspect / replace pre-filter' },
+      { interval: 'Per indicator', task: 'Replace the 24×24×11.5 HEPA when loaded' },
+    ],
+    pricing: null,
+    manualUrl: 'https://www.diamaprosystems.com/products/as-2000',
+    notes: 'Recovered from the "AS2000" code. Uses common 24×24×11.5 filters.',
+  },
+
   // Ridgid 6 Gal Shop Vac (4 units)
   'ridgid|6 gal': {
     cfm: '~100', ppd: null, weightLbs: 11,

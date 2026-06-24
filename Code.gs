@@ -22,7 +22,7 @@ var SIGNOFF_COLS = ['id','json'];
 function doGet(e) {
   // API mode for the standalone live-camera scanner page: ?api=state returns JSON. Does not affect the normal app load.
   var __p = (e && e.parameter) || {};
-  if (__p.api === 'tidy' && __p.key === 'mlrtidy0623') { return ContentService.createTextOutput(normalizeAssets()).setMimeType(ContentService.MimeType.TEXT); } // TEMP maintenance endpoint — removed right after the run
+  // (temporary public cleanup endpoint removed again after the run — normalizeAssets() / restoreAssets() are editor-only)
   if (__p.api) { return apiResponse_(__p); }
   // Phone-camera deep link: ?scan=NUMBER (or ?find=NUMBER) from a QR label opens that piece.
   var scan = (e && e.parameter && (e.parameter.scan || e.parameter.find)) || '';
